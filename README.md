@@ -6,6 +6,32 @@
 
 Trace captures design work from your tools, groups raw saves into **moments**, writes the changelog, files each moment into a **project**, and serves that memory to people (timeline, diffs, decks) and to AI agents (an MCP server). Agents can also recall what your other AI tools remember.
 
+## What it looks like
+
+**Projects.** Each project shows its app's main page on a background for its kind of product, with where it stands.
+
+![Projects: each project's main page on its background, with its latest change](docs/screenshots/projects.webp)
+
+**Screens, walked from the running app.** Trace runs a version of the app and clicks through it like a person would. Every state it reaches is a screen on a map: how you get there, which components draw it, and where it groups with others (a dialog's stages, a row of options).
+
+![Screens: the app's states as a map, grouped and linked by the clicks between them](docs/screenshots/screens.webp)
+
+**Checks.** What needs you, by rule: changes outside what was asked, values that keep flipping back, the design and the code apart, rules you set, states nobody has seen.
+
+![Checks: what needs a person, and the states in the code no walk has seen](docs/screenshots/checks.webp)
+
+**Design system, read from what runs.** The colours, type, radii, spacing and components the app actually draws, in its light and dark themes. It can write DESIGN.md and DTCG tokens from them.
+
+![Design system: the app's colours with contrast, read from its CSS](docs/screenshots/design-system.webp)
+
+**The design canvas.** Pick anything on the running app and change it like in Figma, live: layout, padding, text, type, fill, stroke, corners. Each change is kept with its file and line and the code it needs. Claude Code writes it (the `trace-design` skill), or Trace writes it straight into the file when it can do so exactly. Undo and redo work throughout.
+
+![Design canvas: the headline picked, its file and line, and its properties](docs/screenshots/canvas.webp)
+
+**…and its code.** The picked element's file, opened at its line. Edit and save it there; the canvas follows as the app reloads.
+
+![Design canvas, Code tab: the file opened at the picked element's line](docs/screenshots/canvas-code.webp)
+
 ## Run it
 
 ```bash
