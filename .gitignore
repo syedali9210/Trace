@@ -1,0 +1,23 @@
+# Dependencies and build output
+node_modules/
+ui/dist/
+
+# Trace's own data: the database, captured files, walks, runs, the vault (never pushed)
+data/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+
+# Secrets and local settings
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.npmrc
+.claude/
+
+# Scratch left by tests, logs
+Users*AppDataLocalTemp/
+*.log

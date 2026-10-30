@@ -1,0 +1,30 @@
+{
+  "name": "trace",
+  "version": "1.0.0",
+  "description": "Design Context Engine: auto-captured design memory for people and AI agents",
+  "main": "server/index.js",
+  "scripts": {
+    "test": "node --disable-warning=ExperimentalWarning test/selfcheck.js",
+    "start": "node --disable-warning=ExperimentalWarning server/index.js",
+    "mcp": "node bin/trace-mcp.js",
+    "build:ui": "npm --prefix ui run build",
+    "dev:ui": "npm --prefix ui run dev"
+  },
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@fontsource-variable/geist": "^5.3.0",
+    "@fontsource-variable/geist-mono": "^5.3.0",
+    "@fontsource-variable/inter": "^5.3.0",
+    "@phosphor-icons/web": "^2.1.2",
+    "esbuild": "^0.25.12",
+    "htm": "^3.1.1",
+    "lottie-web": "^5.13.0",
+    "pptxgenjs": "^4.0.0",
+    "preact": "^11.0.1",
+    "sharp": "^0.35.5"
+  },
+  "bin": {
+    "trace-mcp": "bin/trace-mcp.js"
+  }
+}
