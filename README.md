@@ -70,7 +70,7 @@ The interface is a React app in `ui/` (Vite, Tailwind v4), installed with the sh
 - Motion follows the OS reduced-motion setting (`MotionConfig reducedMotion="user"`). Theme: light, dark or the system's, from the account menu (shadcn's `.dark` class).
 - The nav rail keeps its own look.
 
-`npm start` serves the built app from `ui/dist` (and falls back to the old no-build app in `web/` if there is no build). To work on the interface with live reload, run the server and then `npm run dev:ui` (Vite on http://127.0.0.1:5317, passing /api to the server).
+`npm start` serves the built app from `ui/dist` (with no build yet, the page says to run `npm --prefix ui install` and `npm run build:ui`). To work on the interface with live reload, run the server and then `npm run dev:ui` (Vite on http://127.0.0.1:5317, passing /api to the server).
 
 ## Connect your tools (Settings → Sources)
 
@@ -308,8 +308,11 @@ Each stage is a worker on a durable job queue (retries with backoff, then a dead
 | `ui/src/app/lib.jsx` | The API client, live events, router, and the wrappers every screen uses (Menu → Dropdown, Seg → Tabs, Dialog, SwitchField, Field, Tip, FluidList) |
 | `ui/src/app/views/timeline.jsx` | A project, opened: iterations down the middle, the cards beside them, annotate (draw, erase, comment, mark) |
 | `ui/src/app/views/journey.jsx` | The journey: prompts, replies, reasoning cards with your review, the script |
-| `server/api.js` | REST API, roles, files, live events, export, hard delete |
-| `ui/` | The app (React, Vite, Tailwind v4, shadcn/ui, Fluid Functionalism). `web/` is the old no-build version, kept as a fallback |
+| `server/api.js` | HTTP: who is asking (owner, member, guest), the request to its route, the built app, stored files, live events, invite links, `/mcp` |
+| `server/router.js` | The route table every `routes/` file adds to, roles (`can`), errors with a status |
+| `server/routes/` | The REST API by area: `home.js` (session, feed, activity, search), `projects.js` (a project, its timeline, tree, journey, agent script, assemble), `work.js` (files, changes, review, uploads, comments), `history.js` (versions, runs, walks, checks, the design canvas), `canvas.js` (blocks, notes, references, decisions, artifacts, case study, thinking), `planning.js` (to-do, proposals, workflow, decks), `ai.js` (Trace’s AI, AI memory), `settings.js` (sources, people, MCP tokens, export, delete everything) |
+| `server/shapes.js` | The shapes more than one area returns: a change and a project as cards, a comment with its replies, the journey |
+| `ui/` | The app (React, Vite, Tailwind v4, shadcn/ui, Fluid Functionalism) |
 
 ## PRD coverage
 
