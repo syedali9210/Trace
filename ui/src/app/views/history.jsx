@@ -27,8 +27,8 @@ export function History({ p, switcher, sub, onSettings }) {
   const quiet = (d) => d.project_id === p.id && d.run?.status !== 'running'; // Claude's steps patch in place, not a reload
   const { data, error, loading, reload } = useFetch(`/projects/${p.id}/history`, ['history'], (t, d) => quiet(d));
   const [runs, setRuns] = useState({}); // Claude's runs in progress, patched from live events
-  const [sel, setSel] = useState(sub && sub !== 'frames' ? sub : null);
-  const [mode, setMode] = useState(sub === 'frames' ? 'frames' : 'versions'); // the versions, or one version's frontend as frames
+  const [sel, setSel] = useState(sub && sub !== 'frames' && sub !== 'checks' ? sub : null);
+  const [mode, setMode] = useState(sub === 'frames' || sub === 'checks' ? 'frames' : 'versions'); // the versions, or one version's frontend as frames
   const [framesOf, setFramesOf] = useState(NOW);
   const [view, setView] = useState(null);
   const [glide, setGlide] = useState(false);
@@ -186,10 +186,10 @@ export function History({ p, switcher, sub, onSettings }) {
     {data?.git && (<div className="hx-mode"><Seg size="compact" label="Show" value={mode} onChange={setMode} options={[{ value: 'versions', label: 'Versions', icon: 'git-commit' }, { value: 'frames', label: 'Frames', icon: 'frame-corners' }]} /></div>)}
     {data?.git && mode === 'frames' && (<div className="hx-where"><span className="hx-pill"><Icon n="clock-counter-clockwise" />{framesOf === NOW ? 'The files as they are now' : `Version ${framesOf.slice(0, 7)} · ${data.versions.find((v) => v.sha === framesOf)?.title || ''}`}</span>{framesOf !== NOW && (<Button variant="ghost" size="compact" onClick={() => setFramesOf(NOW)}>Show now</Button>)}</div>)}
     {data?.git && mode === 'versions' && (<div className="hx-where">
-      <span className="hx-pill" title={data.root}><Icon n="folder-simple" />{data.root?.split(/[\\/]/).pop()}</span>
-      {data.branch && (<span className="hx-pill"><Icon n="git-branch" />{data.branch}</span>)}
-      {data.remote ? (<span className={cn('hx-pill', data.ahead > 0 && 'warn')} title={data.url}>{data.ahead > 0 ? `${plural(data.ahead, 'version')} not pushed` : data.behind > 0 ? `${data.behind} behind ${data.upstream}` : `Up to date with ${data.upstream || data.remote}`}</span>)
-        : (<span className="hx-pill muted">Not on a remote yet</span>)}
+      {/* where the code is, in one chip: the branch and how it stands with its remote (the folder's name only when it isn't the project's) */}
+      <span className={cn('hx-pill', data.ahead > 0 && 'warn')} title={[data.root, data.url].filter(Boolean).join('\n')}><Icon n="git-branch" />
+        {data.root && data.root.split(/[\\/]/).pop() !== p.name && (<span>{data.root.split(/[\\/]/).pop()} ·</span>)}{data.branch || 'no branch'}
+        <span className={cn(!(data.ahead > 0) && 'muted')}>· {!data.remote ? 'not on a remote yet' : data.ahead > 0 ? `${plural(data.ahead, 'version')} not pushed` : data.behind > 0 ? `${data.behind} behind` : 'up to date'}</span></span>
     </div>)}
     <span className="grow"></span>{switcher}
   </header>);
@@ -198,7 +198,7 @@ export function History({ p, switcher, sub, onSettings }) {
   if (loading && !data) return (<div className="hx">{head}<div className="hx-msg"><Loading h={320} /></div></div>);
   if (!data.dir) return (<div className="hx">{head}<Gate icon="folder-simple-plus" title="Link the project’s folder" body={`History reads the folder ${p.name}’s code lives in: every version, who made it, what they were asked and why.`} action={edit && (<Button variant="primary" onClick={onSettings}>Add the folder</Button>)} /></div>);
   if (!data.git) return (<div className="hx">{head}<StartGate p={p} data={data} edit={edit} reload={reload} /></div>);
-  if (mode === 'frames') return (<div className="hx">{head}<FramesCanvas key={framesOf} p={p} sha={framesOf} edit={edit} live={live[framesOf]}
+  if (mode === 'frames') return (<div className="hx">{head}<FramesCanvas key={framesOf} p={p} sha={framesOf} edit={edit} live={live[framesOf]} openChecks={sub === 'checks'}
     title={framesOf === NOW ? p.name : data.versions.find((v) => v.sha === framesOf)?.title || framesOf.slice(0, 7)} /></div>);
 
   const node = sel && (sel === NOW ? { sha: NOW } : data.versions.find((v) => v.sha === sel));
@@ -254,7 +254,7 @@ function VNode({ pid, v, at, sel, head, fresh, live, onPick }) {
     <span className="vbody">
       <span className="vt clamp2">{v.title}</span>
       {asked && (<span className="vasked clamp2"><Icon n="quotes" />{asked}</span>)}
-      <span className="vmeta"><Avatar name={v.who} agent={isAgent(v)} /><span className="trunc">{v.agent || v.who}</span><span className="muted nowrap">· {dayLabel(v.when)} {time(v.when)}</span>
+      <span className="vmeta"><Avatar name={v.who} agent={isAgent(v)} /><span className="trunc" title={v.agent || v.who}>{isAgent(v) ? String(v.agent || v.who).split(/\s+/)[0] : v.who}</span><span className="muted nowrap">· {dayLabel(v.when)} {time(v.when)}</span>
         <span className="grow"></span>{(v.add > 0 || v.del > 0) && (<span className="num vdelta"><span className="add">+{v.add}</span> <span className="del">−{v.del}</span></span>)}</span>
     </span>
     {(head || v.refs.length > 0 || v.comments > 0) && (<span className="vflags">{head && (<span className="vflag here">You’re here</span>)}{v.refs.filter((r) => !head || !/^(main|master)$/.test(r)).slice(0, 2).map((r) => (<span key={r} className="vflag"><Icon n={r.includes('/') ? 'cloud' : 'git-branch'} />{r}</span>))}{v.comments > 0 && (<span className="vflag"><Icon n="chat-circle" />{v.comments}</span>)}</span>)}

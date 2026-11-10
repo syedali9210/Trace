@@ -1,5 +1,6 @@
 // Activity feed: accepted moments, comments, proposals and AI artifacts across the workspace.
 import { useFetch, Header, Icon, ErrorBox, Loading, Empty, rel, day, sx, Fragment } from '../lib.jsx';
+import { changeText } from './home.jsx';
 
 const KIND = { moment: ['git-commit', 'logged', (x) => `#/m/${x.id}`], comment: ['chat-circle', 'commented', (x) => `#/c/${x.id}`], proposal: ['git-pull-request', 'proposed', (x) => `#/proposal/${x.id}`], artifact: ['sparkle', 'returned', (x) => `#/p/${x.project_id}/artifacts`] };
 
@@ -15,7 +16,7 @@ export function Activity() {
           const [icon, verb, href] = KIND[x.kind];
           return <Fragment key={x?.id ?? ki}>{head}<a className="lrow card" style={sx("text-decoration:none;margin-bottom:6px")} href={href(x)}>
             <Icon n={icon} cls={x.kind === 'artifact' ? 'tool-ico k-agent' : 'muted'}  />
-            <div className="col grow" style={sx("gap:2px")}><span className="small"><b style={sx("font-weight:500")}>{x.who || 'Someone'}</b> {verb} {x.kind === 'comment' ? 'on' : ''} <span className="muted">{x.project_name || ''}</span></span><span className="small ink2 clamp2">{x.text}</span></div>
+            <div className="col grow" style={sx("gap:2px")}><span className="small"><b style={sx("font-weight:500")}>{x.who || 'Someone'}</b> {verb} {x.kind === 'comment' ? 'on' : ''} <span className="muted">{x.project_name || ''}</span></span><span className="small ink2 clamp2">{changeText({ title: x.text }, x.project_name || '')}</span></div>
             <span className="tiny muted">{rel(x.ts)}</span></a></Fragment>;
         })}</div>)}
     </div></>;

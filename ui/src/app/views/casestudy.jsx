@@ -21,7 +21,7 @@ function Section({ p, s, n, reload, focused }) {
   return (<section className={`cs-sec${focused ? ' focus' : ''}`} id={`cs-${s.id}`} aria-labelledby={`csq-${s.id}`}>
     <div className="cs-n">{String(n).padStart(2, '0')}</div>
     <div className="col" style={sx("gap:12px;min-width:0")}>
-      <div className="row wrap" style={sx("gap:8px")}><h2 id={`csq-${s.id}`} className="grow">{s.q}</h2><span className={`chip ${st.cls}`}>{st.label}</span></div>
+      <div className="row wrap" style={sx("gap:8px")}><h2 id={`csq-${s.id}`} className="grow">{s.q}</h2>{s.status !== 'filled' && (<span className={`chip ${st.cls}`}>{st.label}</span>)}</div>
       {edit ? (<div className="col"><Textarea className="cs-ta" rows="6" autoFocus value={text} onChange={(e) => setText(e.target.value)} aria-label={s.q} onKeyDown={(e) => { if (e.key === 'Escape') setEdit(false); if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) save(text); }}></Textarea>
           <div className="row"><Button variant="primary" size="compact" onClick={() => save(text)}>Save</Button><Button variant="ghost" size="compact" onClick={() => setEdit(false)}>Cancel</Button>{s.origin === 'you' || s.origin === 'agent' ? <><span className="grow"></span><Button variant="ghost" size="compact" onClick={() => save('')}>Clear my answer</Button></> : ''}</div></div>)
         : s.answer ? (<button className="cs-answer" onClick={() => setEdit(true)} aria-label={`Edit the answer to: ${s.q}`}>{s.answer}</button>)
@@ -51,7 +51,7 @@ export function CaseStudy({ p, focus }) {
   return (<div className="cs">
     <aside className="cs-nav" aria-label="Case study sections">
       <div className="cs-ready"><div className="cs-bar"><i style={sx({ width: `${data.readiness}%` })}></i></div><span className="small"><b>{data.readiness}%</b> answered</span></div>
-      <nav>{data.sections.map((s, i) => (<a key={s?.id ?? i} href={`#/p/${p.id}/casestudy/${s.id}`} className={`st-${s.status}`}><span className="d"></span><span className="trunc">{s.q}</span></a>))}</nav>
+      <nav>{data.sections.map((s, i) => (<a key={s?.id ?? i} href={`#/p/${p.id}/casestudy/${s.id}`} className={`st-${s.status}`}><span className="d"></span><span className="clamp2">{s.q}</span></a>))}</nav>
       <div className="col" style={sx("gap:6px")}>
         {ai?.ready && p.can_edit && (<Button variant="secondary" size="compact" leadingIcon={ph('pen-nib')} onClick={draft} aria-disabled={drafting}>{drafting ? 'Writing from the work…' : 'Write it again from the work'}</Button>)}
         <Button variant="tertiary" size="compact" leadingIcon={ph("robot")} onClick={() => copy(prompt, 'Prompt copied: paste it into your coding agent')}>Ask your agent</Button>

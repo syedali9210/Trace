@@ -49,7 +49,7 @@ export function AddLink({ onClose, project_id, asReference, onAdded }) {
       {err && (<div className="errbox" role="alert">{err}</div>)}
       <Field label="Link" hint={asReference ? 'Dribbble, Behance, YouTube, a live site… Trace keeps a snapshot and tags it.' : 'Figma, Framer, Spline, Rive, Webflow, Adobe, YouTube, Loom, Dribbble, Behance, Google Docs or any page. Trace stores a snapshot and re-checks it every 6 hours.'}>
         <Input type="url" inputMode="url" spellCheck="false" autoCapitalize="none" placeholder="https://" value={url} onChange={(e) => setUrl(e.target.value)} autoFocus /></Field>
-      <div className="row"><Button variant="primary" size="default" type="submit" aria-disabled={busy}>{busy ? 'Taking a snapshot…' : 'Add link'}</Button></div>
+      <div className="row" style={sx("justify-content:flex-end;gap:8px")}><Button variant="ghost" size="default" type="button" onClick={onClose}>Cancel</Button><Button variant="primary" size="default" type="submit" aria-disabled={busy || !url.trim()}>{busy ? 'Taking a snapshot…' : 'Add link'}</Button></div>
     </form>
   </Dialog>);
 }

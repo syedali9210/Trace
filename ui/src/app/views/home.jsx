@@ -8,7 +8,7 @@ import { Backdrop, effectFor } from '../effects/index.jsx';
 
 export function TopActions({ review, view }) {
   return <>{review > 0 && (<Tip tip="Work Trace wasn’t sure where to file"><Button variant="tertiary" size="compact" leadingIcon={ph("tray")} render={<a href="#/inbox" />}><span className="label-lg">Review</span><span className="count">{review}</span></Button></Tip>)}
-    <Seg label="View" value={view} onChange={(v) => go({ projects: '/projects', latest: '/', todo: '/todo' }[v])} options={[{ value: 'projects', label: 'Projects', icon: 'folder' }, { value: 'latest', label: 'Latest', icon: 'clock-counter-clockwise' }, { value: 'todo', label: 'To do', icon: 'check-square' }]}  /></>;
+    <Seg label="View" value={view} onChange={(v) => go({ projects: '/projects', latest: '/', todo: '/todo' }[v])} options={[{ value: 'latest', label: 'Home', icon: 'house' }, { value: 'projects', label: 'Projects', icon: 'folder' }, { value: 'todo', label: 'To do', icon: 'check-square' }]}  /></>;
 }
 
 // The tasks on a project, as the card shows them: who has each one.
@@ -39,8 +39,16 @@ function Expanded({ p, onClose }) {
 function Row({ p, i, n, reload, onExpand }) {
   const m = p.latest;
   const again = () => api(`/moments/${m.id}/redescribe`, { method: 'POST' }).then(() => { toast('Writing it again from the diff'); setTimeout(reload, 800); }).catch(fail);
-  const clog = (<div className="feedcard"><Changelog m={m && { ...m, rows: m.rows.slice(0, 8) }} project={p} menu={<>{m && (<Button variant="ghost" size="icon-compact" aria-label="Write the changes again" title="Write again" onClick={again}><Icon n="arrows-clockwise" size={15} /></Button>)}<Button variant="ghost" size="icon-compact" aria-label={`Open ${p.name}`} title="Open project" render={<a href={`#/p/${p.id}`} />}><Icon n="dots-three" size={15} /></Button></>}>
-    <Button variant="ghost" size="icon-compact" className="expand absolute right-2.5 bottom-2.5 z-[1]" aria-label={`Expand ${p.name}`} title="Expand" onClick={() => onExpand(p)}><Icon n="arrows-out-simple" size={15} /></Button>
+  const facts = [p.screens > 0 && plural(p.screens, 'screen'), p.files > 0 && plural(p.files, 'file'), p.iterations > 0 && plural(p.iterations, 'change'), rel(p.last)].filter(Boolean).join(' · ');
+  const clog = (<div className="feedcard"><Changelog m={m && { ...m, rows: m.rows.slice(0, 8) }} project={p} sub={<span className="clog-sub">{facts}</span>} menu={<>{m && (<Button variant="ghost" size="icon-compact" aria-label="Write the changes again" title="Write again" onClick={again}><Icon n="arrows-clockwise" size={15} /></Button>)}</>}>
+    {p.next && (<div className="clog-next"><span>Next</span><p>{p.next}</p></div>)}
+    <div className="clog-foot">{/* where to go from here, named */}
+      <Button variant="tertiary" size="compact" render={<a href={`#/p/${p.id}`} />}>Open</Button>
+      {p.code && (<Button variant="ghost" size="compact" render={<a href={`#/p/${p.id}/history`} />}>Versions</Button>)}
+      {p.code && (<Button variant="ghost" size="compact" render={<a href={`#/p/${p.id}/design`} />}>Design</Button>)}
+      <span className="grow"></span>
+      <Button variant="ghost" size="icon-compact" aria-label={`Expand ${p.name}`} title="Expand" onClick={() => onExpand(p)}><Icon n="arrows-out-simple" size={15} /></Button>
+    </div>
   </Changelog></div>);
   const pic = (<a className="fimg wide fstage" href={`#/p/${p.id}`} aria-label={`Open ${p.name}`}><Cover p={p} n={n} /><span className="cap">{p.name}</span></a>);
   return (<div className={`frow${i % 2 ? ' flip' : ''}`}>{pic}{clog}</div>);
@@ -52,12 +60,14 @@ export function Latest() {
   const [seeding, setSeeding] = useState(false);
   const seed = async () => { if (seeding) return; setSeeding(true); try { await api('/demo', { method: 'POST' }); await refreshMe(); toast('Loading the sample. Watch it fill in.'); reload(); } catch (e) { fail(e); } setSeeding(false); };
   const rows = data?.projects.filter((p) => p.latest) || [];
+  const need = data?.projects.filter((p) => (p.open_reviews || 0) + (p.tasks?.length || 0) > 0) || []; // what needs you, before what's new
   return <><Header actions={(<TopActions review={me?.inbox} view="latest"  />)}><b>Home</b></Header>
     <div className="content">
       {error && (<ErrorBox error={error} retry={reload}  />)}
       {loading && !data && (<div className="feed">{[1, 2].map((_, ki) => (<div key={ki} className="frow"><div className="skeleton" style={sx("height:380px")}></div><div className="skeleton" style={sx("height:380px")}></div></div>))}</div>)}
       {data && !rows.length && (<div className="empty"><Icon n="files" cls="big"  /><h2>Drop files here</h2><p>Or use the upload button below. Trace sorts each file into the right project and notes what changed.</p>
         <div className="row wrap" style={sx("margin-top:12px;justify-content:center")}><Button variant="tertiary" size="compact" render={<a href="#/settings/sources" />}>Connect a tool</Button><Button variant="ghost" size="compact" render={<a href="#/memory" />}>Connect your AIs’ memory</Button>{!me?.projects?.length && (<Button variant="ghost" size="compact" onClick={seed} aria-disabled={seeding}>{seeding ? 'Loading…' : 'Load a sample'}</Button>)}</div></div>)}
+      {need.length > 0 && (<nav className="needs-line" aria-label="Needs you"><span>Needs you</span>{need.map((p) => (<a key={p.id} className="needs-item" href={`#/p/${p.id}`}><b>{p.name}</b>{p.open_reviews > 0 && (<span className="pc-flag">{plural(p.open_reviews, 'review')}</span>)}{p.tasks?.length > 0 && (<span className="pc-flag">{plural(p.tasks.length, 'task')}</span>)}<Icon n="arrow-right" /></a>))}</nav>)}
       {rows.length > 0 && (<div className="feed">{rows.map((p, i) => (<Row p={p} i={i} n={kindIndex(data.projects, p)} reload={reload} key={p.id} onExpand={setBig}  />))}</div>)}
     </div>
     {big && (<Expanded p={big} onClose={() => setBig(null)}  />)}</>;
@@ -94,13 +104,16 @@ function Cover({ p, n }) {
 // of its kind it is, so projects of one kind wear different backgrounds.
 export function ProjectCard({ p, wide, n = 0 }) {
   const open = p.open_reviews || 0, tasks = p.tasks?.length || 0;
-  return (<a className={cn('pc', wide && 'wide')} href={`#/p/${p.id}`}>
+  return (<a className={cn('pc', wide && 'wide', open + tasks > 0 && 'needs')} href={`#/p/${p.id}`}>
     <span className="pc-pic"><Cover p={p} n={n} /></span>
     <span className="pc-b">
+      {open + tasks > 0 && (<span className="pc-need">{open > 0 && (<span className="pc-flag">{plural(open, 'review')}</span>)}{tasks > 0 && (<span className="pc-flag">{plural(tasks, 'task')}</span>)}<span className="pc-need-l">need you</span></span>)}
       <span className="pc-t"><b className="trunc">{p.name}</b>{p.code && (<Icon n="code" cls="pc-ico" label="A code folder" />)}</span>
-      <span className="pc-l">{(wide && p.stands) || (p.latest ? changeText(p.latest, p.name) : 'Nothing captured yet')}</span>
-      <span className="pc-m">{p.category && <><span>{p.category}</span><span aria-hidden="true">·</span></>}<span>{rel(p.last)}</span><span aria-hidden="true">·</span><span>{plural(p.iterations, 'change')}</span>
-        {open > 0 && (<span className="pc-flag">{plural(open, 'review')}</span>)}{tasks > 0 && (<span className="pc-flag">{plural(tasks, 'task')}</span>)}</span>
+      {wide ? <>
+        <span className="pc-facts">{[p.screens > 0 && plural(p.screens, 'screen'), p.files > 0 && plural(p.files, 'file'), p.iterations > 0 && plural(p.iterations, 'change')].filter(Boolean).join(' · ') || 'Nothing captured yet'}</span>
+        {p.latest && (<span className="pc-l pc-last">{changeText(p.latest, p.name)}</span>)}
+      </> : (<span className="pc-l">{p.latest ? changeText(p.latest, p.name) : 'Nothing captured yet'}</span>)}
+      <span className="pc-m">{p.category && <><span>{p.category}</span><span aria-hidden="true">·</span></>}<span>{rel(p.last)}</span>{!wide && <><span aria-hidden="true">·</span><span>{plural(p.iterations, 'change')}</span></>}</span>
     </span>
   </a>);
 }

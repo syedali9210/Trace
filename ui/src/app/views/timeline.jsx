@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Sentence, AttrCards, dayLabel, time, longDate } from './ncs.jsx';
 import { Pics, FiledOut, fileChat } from './journey.jsx';
 import { AskButton } from './ask.jsx';
+import { Checks } from './frames.jsx';
 
 const TOOLS = [['draw', 'pencil-simple', 'Draw'], ['erase', 'eraser', 'Erase'], ['comment', 'chat-circle', 'Comment'], ['mark', 'crosshair', 'Mark a spot']];
 const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -84,6 +85,7 @@ function Context({ p, it, reload, focusMark }) {
   const why = (m.why || '').split(/(?<=[.!?])\s+/);
   const markers = (it.marks || []).filter((x) => x.kind === 'marker');
   const asked = it.asked.at(-1);
+  const [allRefs, setAllRefs] = useState(false);
   const again = () => api(`/moments/${m.id}/redescribe`, { method: 'POST' }).then(() => { toast('Writing it again from the diff'); setTimeout(reload, 800); }).catch(fail);
   return (<div className="ctxs" key={m.id}>
     <article className="clog">
@@ -107,7 +109,7 @@ function Context({ p, it, reload, focusMark }) {
       <Pics items={asked.images} label="Pictures you gave" size="sm"  />
       {it.asked.length > 1 && (<a className="tiny" href={`#/m/${m.id}`}>{plural(it.asked.length - 1, 'earlier prompt')}</a>)}
     </article>)}
-    {it.refs.length > 0 && (<article className="clog"><h3>References</h3><Pics items={it.refs} label="References pinned to this change" size="sm"  /></article>)}
+    {it.refs.length > 0 && (<article className="clog"><div className="clog-h"><h3 className="grow">References <span className="num muted">{it.refs.length}</span></h3>{it.refs.length > 6 && (<Button variant="ghost" size="compact" aria-expanded={allRefs} onClick={() => setAllRefs((v) => !v)}>{allRefs ? 'Fewer' : `All ${it.refs.length}`}</Button>)}</div><Pics items={allRefs ? it.refs : it.refs.slice(0, 6)} label="References pinned to this change" size="sm"  /></article>)}{/* a row of them; the rest one click away */}
   </div>);
 }
 
@@ -126,8 +128,42 @@ function Digest({ p }) {
     <div className="digest-h"><Icon n="compass"  /><b>Where it stands</b><span className="tiny muted" title={from ? `Synced from ${from}` : ''}>{rel(d.at)}</span><span className="grow"></span>
       {p.can_edit && (<Button variant="ghost" size="icon-compact" aria-label="Sync now" title="Sync with the work, the folders and your AIs" onClick={sync}><Icon n="arrows-clockwise" cls={busy ? 'spin' : ''} /></Button>)}</div>
     <p>{d.now}</p>
-    {more ? (<div className="digest-more">{list('What changed', d.changed)}{list('Open', d.open)}{list('Next', d.next)}{from && (<p className="tiny muted">Synced from {from} · {d.model?.split('/').pop()}</p>)}</div>)
+    {more ? (<div className="digest-more">{list('What changed', d.changed)}{list('Open', d.open)}{list('Next', (d.next || []).filter((x) => !(d.open || []).includes(x)))}{from && (<p className="tiny muted">Synced from {from} · {d.model?.split('/').pop()}</p>)}</div>)
       : (d.changed?.length || d.open?.length || d.next?.length) > 0 && (<button className="digest-toggle" onClick={() => setMore(true)}>What changed, what’s open, what’s next</button>)}
+  </section>);
+}
+
+// What needs the person, on top: the checks Trace keeps on the files as they are (History → Frames → Checks), the
+// first three with one way in each, the first one primary. Each opens the Checks panel beside the page, not away from it.
+const KIND = { scope: 'Outside the ask', rule: 'Breaks a rule', broken: 'Breaks a decision', flip: 'Undecided', design: 'Off the design', figma: 'Off Figma', stress: 'Breaks', drift: 'Almost the same' };
+const BREAKS = new Set(['rule', 'broken', 'stress']);
+function NeedsYou({ p, on }) {
+  const { data: q, reload } = useFetch(on ? `/projects/${p.id}/history/now/queue` : null, ['history', 'decision'], (t, d) => t === 'decision' || (d.project_id === p.id && d.walking === null));
+  const [open, setOpen] = useState(false);
+  const items = q?.items || [];
+  if (!items.length && !open) return null;
+  return (<section className="needs" aria-label="Needs you">
+    <div className="needs-h"><b>Needs you</b><span className="num muted">{items.length}</span><span className="grow"></span>{items.length > 3 && (<button className="needs-all small" onClick={() => setOpen(true)}>All {items.length}</button>)}</div>
+    {items.slice(0, 3).map((it, i) => (<div key={it.key} className="needs-r">
+      <div className="col grow" style={sx('gap:2px;min-width:0')}><span className="needs-t">{it.title}</span><span className="tiny muted trunc">{it.where?.file || it.from?.file || 'Across the app'}</span></div>
+      <span className={`needs-k${BREAKS.has(it.kind) ? ' bad' : ''}`}>{KIND[it.kind] || 'Check'}</span>
+      <Button variant={i === 0 ? 'primary' : 'secondary'} size="compact" onClick={() => setOpen(true)}>{it.kind === 'flip' ? 'Decide' : 'Review'}</Button>
+    </div>))}
+    {open && (<div className="ptl-ck"><Checks p={p} sha="now" q={q} edit={p.can_edit} onScreen={() => go(`/p/${p.id}/history/frames`)} onReload={reload} onClose={() => setOpen(false)} /></div>)}
+  </section>);
+}
+
+// One timeline: a project kept in git leads with its versions (who changed what, and what they were asked), newest
+// first; its uploads and imports follow under them.
+function Versions({ p, vs }) {
+  if (!vs?.length) return null;
+  return (<section className="needs" aria-label="Versions">
+    <div className="needs-h"><b>Versions</b><span className="num muted">{vs.length}</span><span className="grow"></span><a className="small" href={`#/p/${p.id}/history`}>All {vs.length} in History</a></div>
+    {vs.slice(0, 3).map((v) => (<a key={v.sha} className="needs-r vrow" href={`#/p/${p.id}/history/${v.sha}`}>
+      <Avatar name={v.agent || v.who} agent={!!v.agent} />
+      <div className="col grow" style={sx('gap:2px;min-width:0')}><span className="needs-t trunc">{v.title}</span>{v.asked && (<span className="small muted trunc"><Icon n="quotes" /> {v.asked.replace(/\s+/g, ' ')}</span>)}</div>
+      <span className="tiny muted nowrap">{v.agent || v.who} · {dayLabel(v.when)}</span>
+    </a>))}
   </section>);
 }
 
@@ -156,19 +192,25 @@ export function ProjectTimeline({ p, switcher }) {
   const jump = (i) => document.querySelector(`.tlf[data-i="${i}"]`)?.scrollIntoView({ behavior: still() ? 'auto' : 'smooth', block: 'center' });
   const cur = its[Math.min(active, its.length - 1)];
   const desc = (p.brief || '').split('\n').map((l) => l.replace(/^goal:\s*/i, '')).find(Boolean);
+  const hx = useFetch(`/projects/${p.id}/history`, ['history'], (t, d) => d.project_id === p.id && d.run?.status !== 'running').data; // its versions, when its folder keeps them
+  const facts = [hx?.versions?.length && plural(hx.versions.length, 'version'), p.counts.files && plural(p.counts.files, 'file'), p.counts.decisions && plural(p.counts.decisions, 'decision'), p.counts.references && plural(p.counts.references, 'reference')].filter(Boolean);
   return (<div className="ptl">
     <aside className="ptl-left">
       <a className="back" href="#/" aria-label="Back to Home" title="Home"><Icon n="arrow-left"  /></a>
-      <nav className="scrub" aria-label="Iterations">{its.slice(0, 80).map((it, i) => (<button key={it?.id ?? i} aria-current={i === active} aria-label={`${it.moment.title}, ${longDate(it.moment.end_ts)}`} title={`${it.moment.title} · ${longDate(it.moment.end_ts)}`} onClick={() => jump(i)}></button>))}</nav>
+      {its.length > 1 && <nav className="scrub" aria-label="Iterations">{its.slice(0, 80).map((it, i) => (<button key={it?.id ?? i} aria-current={i === active} aria-label={`${it.moment.title}, ${longDate(it.moment.end_ts)}`} title={`${it.moment.title} · ${longDate(it.moment.end_ts)}`} onClick={() => jump(i)}></button>))}</nav>}
     </aside>
     <main className="ptl-mid">
       <div className="datepill" aria-live="polite">{cur ? longDate(cur.moment.end_ts) : ' '}</div>
       <header className="ptl-head">
-        <span className="meta">{plural(data?.total ?? p.counts.timeline, 'Iteration')}{p.latest ? ` · ${time(p.latest.end_ts)}` : ''}</span>
+        <span className="meta">{hx?.versions?.length ? `Last version ${dayLabel(hx.versions[0].when)}, ${time(hx.versions[0].when)}` : `${plural(data?.total ?? p.counts.timeline, 'Iteration')}${p.latest ? ` · ${time(p.latest.end_ts)}` : ''}`}</span>
         <h1>{p.name}</h1>
-        {desc ? (<p>{desc}</p>) : p.can_edit && (<p className="muted">No description yet. Add one in the project’s settings (⋯).</p>)}
+        {desc && (<p>{desc}</p>)}
+        {facts.length > 0 && (<p className="ptl-facts">{facts.map((x) => (<span key={x}>{x}</span>))}</p>)}{/* what it is, in one line; what it lacks isn't news */}
       </header>
+      <NeedsYou p={p} on={!!hx?.git} />
       <Digest p={p}  />
+      <Versions p={p} vs={hx?.versions} />
+      {hx?.versions?.length > 0 && its.length > 0 && (<h2 className="ptl-sub">Uploads and imports <span className="num muted">{data?.total ?? its.length}</span></h2>)}
       {error && (<ErrorBox error={error} retry={reload}  />)}
       {loading && !data && (<div className="col" style={sx("gap:16px")}><Loading h={300}  /><Loading h={300}  /></div>)}
       {data && !its.length && (<div className="empty"><Icon n="files" cls="big"  /><h2>Drop files here</h2><p>Every iteration of {p.name} lands here, newest first.</p></div>)}

@@ -95,7 +95,7 @@ export function Artifacts({ p, sub }) {
   return (<div className={`arts${a ? ' has' : ''}`}>
     <aside className="art-side">
       <div className="row"><b className="grow">{list.length} artifact{list.length === 1 ? '' : 's'}</b>{p.can_edit && (<Button variant="tertiary" size="compact" leadingIcon={ph("plus")} onClick={() => setAdding(true)}>Add</Button>)}</div>
-      {!list.length ? (<Empty icon="sparkle" title={chats.data?.made?.length ? 'Nothing added yet' : 'No artifacts yet'}>What your AIs make (prototypes, components, copy, specs) lands here when they use Trace’s add_artifact. Or add your own: paste a Claude artifact and it runs here.</Empty>)
+      {!list.length ? (chats.data?.made?.length ? (<p className="small muted">None added here yet. What your AIs made in chats is below.</p>) : <Empty icon="sparkle" title="No artifacts yet">What your AIs make (prototypes, components, copy, specs) lands here when they use Trace’s add_artifact. Or add your own: paste a Claude artifact and it runs here.</Empty>)
       : (<nav className="art-list">{list.map((x, ki) => (<a key={x?.id ?? ki} href={`#/p/${p.id}/artifacts/${x.id}`} aria-current={x.id === sub ? 'page' : undefined} className="art-item">
           <span className="art-ico"><Icon n={{ react: 'atom', html: 'browser', svg: 'shapes', markdown: 'article', image: 'image', link: 'link-simple' }[guess(x)] || 'code'}  /></span>
           <span className="col grow" style={sx("gap:0;min-width:0")}><span className="trunc small" style={sx("font-weight:500")}>{x.title}</span><span className="tiny muted trunc">{x.agent === 'you' ? 'Added by you' : x.agent}{x.model ? ` · ${x.model}` : ''} · {rel(x.created_at)}</span></span>

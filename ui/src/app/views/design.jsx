@@ -17,7 +17,7 @@ const hexOf = (v) => { // any colour Chrome computes (rgb, lab, oklch…) as the
   return `#${[...ink.getImageData(0, 0, 1, 1).data.slice(0, 3)].map((x) => x.toString(16).padStart(2, '0')).join('')}`;
 };
 const clear = (v) => !v || v === 'transparent' || /rgba\([^)]*,\s*0\)$/.test(v);
-const said = (t, n = 160) => (t && t.length > n ? `${t.slice(0, n - 1)}…` : t || '');
+const said = (t0, n = 160) => { const t = String(t0 || '').replace(/<launch-selected-element>[\s\S]*?(<\/launch-selected-element>|$)/g, '(picked an element on the page) ').replace(/\s+/g, ' ').trim(); return t.length > n ? `${t.slice(0, n - 1)}…` : t; };
 
 export function DesignCanvas({ p, switcher }) {
   const d = useFetch(`/projects/${p.id}/design`, ['design']);
@@ -127,6 +127,8 @@ export function DesignCanvas({ p, switcher }) {
   const k = w ? Math.min(1, (w - 48) / DEVICES[device]) : 1;
   return (<div className="dz">
     <div className="dz-bar">
+      <a className="back" href={`#/p/${p.id}`} aria-label={`Back to ${p.name}`} title={p.name}><Icon n="arrow-left" /></a>
+      <div className="pbar-t"><span className="meta">Design canvas</span><b className="trunc">{p.name}</b></div>
       {switcher}
       <span className="grow"></span>
       <span className="dz-hist">
@@ -206,8 +208,8 @@ const Pick = ({ label, value, options, onLive, changed }) => (<div className={cn
   {options.map(([v, icon, tip]) => (<button key={v} type="button" role="radio" aria-checked={value === v} title={tip} className={cn(value === v && 'on')} onClick={() => onLive(v)}><Icon n={icon} size={14} /></button>))}
 </div>);
 // A row: its label in the grey column (dark when changed, with the way back) and its controls.
-const Row = ({ label, changed, onReset, children }) => (<div className="dz-row">
-  <span className={cn('dz-lab', changed && 'on')}>{label}{changed && onReset && (<button type="button" className="dz-reset" title="Back to how it was" aria-label={`${label}: back to how it was`} onClick={onReset}><Icon n="arrow-counter-clockwise" size={12} /></button>)}</span>
+const Row = ({ label, changed, onReset, children, solo }) => (<div className={cn('dz-row', solo && 'solo')}>
+  <span className={cn('dz-lab', changed && 'on')}>{solo ? null : label}{changed && onReset && (<button type="button" className="dz-reset" title="Back to how it was" aria-label={`${label}: back to how it was`} onClick={onReset}><Icon n="arrow-counter-clockwise" size={12} /></button>)}</span>
   <div className="dz-ctl">{children}</div>
 </div>);
 // A section that folds and remembers it; the rarer ones start folded.
@@ -250,18 +252,18 @@ function Props({ el, where, edit, changed, onChange, onText, onEditText, onReset
         options={column ? [['flex-start', 'align-top', 'Top'], ['center', 'align-center-vertical', 'Middle'], ['flex-end', 'align-bottom', 'Bottom'], ['space-between', 'arrows-out-line-vertical', 'Space between']] : [['flex-start', 'align-left', 'Start'], ['center', 'align-center-horizontal', 'Centre'], ['flex-end', 'align-right', 'End'], ['space-between', 'arrows-out-line-horizontal', 'Space between']]} /></Row>)}
     </Sec>)}
     <Sec id="size" title="Size" changed={count('width', 'height')}>
-      <Row label="Size" changed={on('width', 'height')} onReset={back('width', 'height')}><div className="dz-two"><Num label="W" value={num(s.width)} changed={on('width')} onLive={live(px('width'))} title="Width" /><Num label="H" value={num(s.height)} changed={on('height')} onLive={live(px('height'))} title="Height" /></div></Row>
+      <Row solo label="Size" changed={on('width', 'height')} onReset={back('width', 'height')}><div className="dz-two"><Num label="W" value={num(s.width)} changed={on('width')} onLive={live(px('width'))} title="Width" /><Num label="H" value={num(s.height)} changed={on('height')} onLive={live(px('height'))} title="Height" /></div></Row>
     </Sec>
     <Sec id="padding" title="Padding" changed={count(...PAD.map((x) => x[0]))}>
       {sides || !evenSides ? PAD.map(([k, label, l]) => (<Row key={k} label={label} changed={on(k)} onReset={back(k)}><Num label={l} value={num(s[k])} changed={on(k)} onLive={live(px(k))} title={`Padding, ${label.toLowerCase()}`} /></Row>))
-        : (<Row label="Padding" changed={on(...PAD.map((x) => x[0]))} onReset={back(...PAD.map((x) => x[0]))}><div className="dz-two">
+        : (<Row solo label="Padding" changed={on(...PAD.map((x) => x[0]))} onReset={back(...PAD.map((x) => x[0]))}><div className="dz-two">
           <Num icon="arrows-horizontal" value={num(s.paddingLeft)} changed={on('paddingLeft', 'paddingRight')} onLive={live(both('paddingLeft', 'paddingRight'))} title="Padding, left and right" />
           <Num icon="arrows-vertical" value={num(s.paddingTop)} changed={on('paddingTop', 'paddingBottom')} onLive={live(both('paddingTop', 'paddingBottom'))} title="Padding, top and bottom" />
         </div></Row>)}
       {evenSides && (<button type="button" className="dz-more" onClick={() => setSides(!sides)}>{sides ? 'Sides together' : 'Each side'}</button>)}
     </Sec>
     {el.editable && (<Sec id="words" title="Text" changed={changed.has('text') ? 1 : 0}>
-      <Row label="Words" changed={changed.has('text')} onReset={() => onReset('text')}><Words value={el.content} changed={changed.has('text')} onLive={ro ? () => {} : onText} /></Row>
+      <Row solo label="Words" changed={changed.has('text')} onReset={() => onReset('text')}><Words value={el.content} changed={changed.has('text')} onLive={ro ? () => {} : onText} /></Row>
       {edit && (<button type="button" className="dz-more" onClick={onEditText}>Edit it on the page (or double-click it there)</button>)}
     </Sec>)}
     {el.own && (<Sec id="type" title="Type" changed={count('fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'textAlign', 'color')}>
@@ -278,17 +280,17 @@ function Props({ el, where, edit, changed, onChange, onText, onEditText, onReset
       <Row label="Colour" changed={on('color')} onReset={back('color')}><Colour label="Text colour" value={s.color} changed={on('color')} onLive={live((v) => onChange('color', v))} /></Row>
     </Sec>)}
     <Sec id="fill" title="Fill" changed={count('backgroundColor')}>
-      <Row label="Fill" changed={on('backgroundColor')} onReset={back('backgroundColor')}><Colour label="Fill" value={s.backgroundColor} changed={on('backgroundColor')} onLive={live((v) => onChange('backgroundColor', v))} /></Row>
+      <Row solo label="Fill" changed={on('backgroundColor')} onReset={back('backgroundColor')}><Colour label="Fill" value={s.backgroundColor} changed={on('backgroundColor')} onLive={live((v) => onChange('backgroundColor', v))} /></Row>
     </Sec>
     <Sec id="stroke" title="Stroke" open={parseFloat(s.borderTopWidth) > 0} changed={count('borderWidth', 'borderColor')}>
       <Row label="Width" changed={on('borderWidth')} onReset={back('borderWidth', 'borderStyle')}><Num label="Width" icon="square" value={num(s.borderTopWidth)} changed={on('borderWidth')} onLive={live((v) => { if (s.borderTopStyle === 'none') onChange('borderStyle', 'solid'); onChange('borderWidth', `${v}px`); })} title="Stroke width" /></Row>
       <Row label="Colour" changed={on('borderColor')} onReset={back('borderColor')}><Colour label="Stroke colour" value={parseFloat(s.borderTopWidth) > 0 ? s.borderTopColor : ''} changed={on('borderColor')} onLive={live((v) => onChange('borderColor', v))} /></Row>
     </Sec>
     <Sec id="corners" title="Corners" changed={count('borderRadius')}>
-      <Row label="Radius" changed={on('borderRadius')} onReset={back('borderRadius')}><Num label="Radius" icon="corners-out" value={num(s.borderRadius)} changed={on('borderRadius')} onLive={live(px('borderRadius'))} title="Corner radius" /></Row>
+      <Row solo label="Radius" changed={on('borderRadius')} onReset={back('borderRadius')}><Num label="Radius" icon="corners-out" value={num(s.borderRadius)} changed={on('borderRadius')} onLive={live(px('borderRadius'))} title="Corner radius" /></Row>
     </Sec>
     <Sec id="opacity" title="Opacity" open={+s.opacity < 1} changed={count('opacity')}>
-      <Row label="Opacity" changed={on('opacity')} onReset={back('opacity')}><Num label="Opacity" icon="drop-half" value={Math.round((+s.opacity || 0) * 100)} unit="%" max={100} changed={on('opacity')} onLive={live((v) => onChange('opacity', String(+(v / 100).toFixed(2))))} /></Row>
+      <Row solo label="Opacity" changed={on('opacity')} onReset={back('opacity')}><Num label="Opacity" icon="drop-half" value={Math.round((+s.opacity || 0) * 100)} unit="%" max={100} changed={on('opacity')} onLive={live((v) => onChange('opacity', String(+(v / 100).toFixed(2))))} /></Row>
     </Sec>
   </div>);
 }
@@ -317,7 +319,7 @@ function Code({ p, where, edit, stamp }) {
   const lines = (txt ?? '').split('\n').length;
   return (<div className="col dz-codewrap">
     <div className="row" style={sx('gap:6px;align-items:center;min-width:0')}>
-      <span className="tiny muted mono trunc grow" title={file}>{file}{where.line ? `:${where.line}` : ''}</span>
+      <span className="dz-path grow" title={file}><b className="trunc">{file.split('/').pop()}{where.line ? `:${where.line}` : ''}</b><span className="trunc">{file.split('/').slice(0, -1).join('/')}</span></span>
       {dirty && (<span className="tiny">Not saved</span>)}
       <Button variant="ghost" size="compact" onClick={() => { setTxt(null); c.reload(); }} title="The file as it is on disk">Reload</Button>
       {edit && (<Button variant="primary" size="compact" aria-disabled={!dirty} onClick={() => dirty && saveIt()}>Save</Button>)}

@@ -38,10 +38,11 @@ function Rows({ rows, ts }) {
 }
 
 // NCS's changelog card. `project` shows the project's name at the top (the feed); a moment page omits it.
-export function Changelog({ m, project, href, menu, children, rows = true }) {
+export function Changelog({ m, project, href, menu, sub, children, rows = true }) {
   if (!m) return (<article className="clog"><h3>Changes</h3><p className="muted small">No accepted changes yet.</p></article>);
   return (<article className="clog">
     {project && (<div className="clog-h"><Avatar name={project.name}  /><b className="trunc">{project.name}</b><span className="tools">{menu}</span></div>)}
+    {sub}
     <h3>Changes</h3>
     <Sentence seg={m.sentence} text={m.summary}  />
     {rows && m.rows?.length > 0 && <><div className="clog-sep"></div><h3>{dayLabel(m.end_ts)}</h3><Rows rows={m.rows} ts={m.end_ts}  /></>}

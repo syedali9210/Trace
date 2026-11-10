@@ -11,12 +11,12 @@ const AGENTS = ['Claude Code', 'Cursor', 'Codex', 'Trace AI'];
 
 function Card({ t, toggle }) {
   const [icon, label] = STATUS[t.status] || STATUS.open;
-  return <><div className="tc-top"><span className="blabel trunc">{t.project_name}</span><span className={`tc-st st-${t.status}`}>{label}</span></div>
+  return <><div className="tc-top"><span className="blabel trunc">{t.project_name}</span>{t.status !== 'open' && (<span className={`tc-st st-${t.status}`}>{label}</span>)}</div>{/* an open task is what this board is: only a status that says more shows */}
     <div className="tc-main">
       <button className="tc-check" data-nodrag aria-label={t.status === 'done' ? `Mark “${t.title}” not done` : `Mark “${t.title}” done`} title={t.status === 'done' ? 'Not done' : 'Done'} onClick={(e) => { e.stopPropagation(); toggle(t); }}><Icon n={t.status === 'done' ? 'check-circle' : icon}  /></button>
       <div className="tc-text"><p className="tc-title">{t.title}</p>{t.body && (<p className="tc-body">{t.body}</p>)}</div>
     </div>
-    <div className="tc-foot">{t.assignee_name ? (<span className="tc-who"><Avatar name={t.assignee_name} agent={t.assignee_type === 'agent'}  /><span className="trunc">{t.assignee_name}</span></span>) : (<span className="tc-who muted">Nobody yet</span>)}
+    <div className="tc-foot">{t.assignee_name ? (<span className="tc-who"><Avatar name={t.assignee_name} agent={t.assignee_type === 'agent'}  /><span className="trunc">{t.assignee_name}</span></span>) : null /* nobody on it yet: nothing to say */}
       <span className="grow"></span>{t.comments > 0 && (<span className="tc-n"><Icon n="chat-circle"  />{t.comments}</span>)}<span>{rel(t.updated_at)}</span></div></>;
 }
 

@@ -138,7 +138,7 @@ function Files({ p }) {
   const card = (a, ki) => (<article key={a?.id ?? ki} className="card fcard">
     <Thumb snap={a} />
     <div className="b"><a className="n trunc" href={`#/asset/${a.id}`} title={a.path || a.name}>{a.name}</a>
-      <div className="row tiny muted" style={sx('gap:6px')}><ToolIcon tool={a.tool} /><span className="trunc">{a.why || (a.path && a.path !== a.name ? a.path.replace(/\/[^/]*$/, '') : a.type)}</span><span>· {rel(a.updated_at)}</span></div></div>
+      <div className="row tiny muted" style={sx('gap:6px')}><ToolIcon tool={a.tool} /><span className={`trunc${a.why ? '' : ' tail'}`}>{a.why || (a.path && a.path !== a.name ? a.path.replace(/\/[^/]*$/, '') : a.type)}</span><span className="nowrap">· {rel(a.updated_at)}</span></div></div>
   </article>);
   return (<div className="col" style={sx('gap:24px;padding-top:16px')}>
     <div className="row"><span className="small muted grow">{plural(data.length - out.length, 'file')} that matter here{out.length ? `, ${out.length} hidden` : ''}. Every version is kept.</span>
@@ -273,7 +273,7 @@ function ProjectSettings({ p, onClose, reload }) {
     {owner && (<div className="col"><span className="caps">Guest client link · view and comment only, expires</span>
       <div className="row"><Button variant="tertiary" size="compact" onClick={async () => { try { const r = await api(`/projects/${p.id}/guest-links`, { method: 'POST', body: { days: 14, name: 'Client' } }); setGuest(r.link); } catch (e) { fail(e); } }}>Create a 14-day link</Button></div>
       {guest && (<div className="secret"><span className="grow">{guest}</span><Button variant="tertiary" size="compact" onClick={() => copy(guest, 'Guest link copied')}>Copy</Button></div>)}</div>)}
-    {owner && (<div className="col"><span className="caps">Archive or delete</span>
+    {owner && (<div className="dlg-danger"><span className="caps">Archive or delete</span>
       <div className="row wrap"><Button variant="tertiary" size="compact" onClick={() => api(`/projects/${p.id}`, { method: 'PATCH', body: { status: p.status === 'archived' ? 'active' : 'archived' } }).then(() => { refreshMe(); reload(); onClose(); }).catch(fail)}>{p.status === 'archived' ? 'Restore project' : 'Archive project'}</Button></div>
       <p className="small muted">Deleting removes the project, everything captured into it and its stored files, now and for good. Type the project’s name to confirm.</p>
       <div className="row"><Input className="sm" value={confirm} onChange={(e) => setConfirm(e.target.value)} aria-label="Type the project name to confirm" placeholder={p.name} /><Button variant="tertiary" size="compact" className="text-destructive" aria-disabled={confirm !== p.name} onClick={() => confirm === p.name && api(`/projects/${p.id}`, { method: 'DELETE' }).then(() => { refreshMe(); go('/'); toast(`${p.name} deleted`); }).catch(fail)}>Delete project</Button></div></div>)}

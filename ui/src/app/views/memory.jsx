@@ -65,9 +65,10 @@ export function Memory() {
     <div className="content" style={sx("max-width:1100px")}>
       <p className="ink2" style={sx("max-width:68ch;margin-bottom:20px")}>Every AI you work with keeps its own memory: sessions, memory files, CLAUDE.md, AGENTS.md. Trace reads them when it’s asked, here or when an agent calls it, so what one AI learned the others know. Nothing leaves this computer.</p>
       <section className="section"><Ask initial={q}  /></section>
-      <section className="section"><header><h2 className="grow">Your AIs</h2>{data && (<span className="small muted">{plural(data.notes, 'note')} left by agents</span>)}</header>
+      <section className="section"><header><h2 className="grow">Your AIs</h2>{data?.notes > 0 && (<span className="small muted">{plural(data.notes, 'note')} left by agents</span>)}</header>
         {error && (<ErrorBox error={error} retry={reload}  />)}
-        {!data ? (<Loading h={160}  />) : (<div className="ai-grid">{data.adapters.map((a, ki) => (<div key={a?.id ?? ki} className="ai-card">
+        {!data ? (<Loading h={160}  />) : <>{/* the AIs that are connected, as cards; the rest as one row to connect */}
+          <div className="ai-grid">{data.adapters.filter((a) => a.source).map((a, ki) => (<div key={a?.id ?? ki} className="ai-card">
           <div className="row"><Icon n={ICON[a.id]}  /><b className="grow">{a.label}</b>{a.source ? (<span className="row tiny muted" style={sx("gap:4px")}><span className={`dot ${a.progress?.running ? 'warn' : 'on'}`}></span>{a.progress?.running ? 'Reading' : 'Connected'}</span>) : ''}</div>
           <span className="tiny muted">{a.where}</span>
           {a.source ? (<span className="small">{a.progress?.running ? `${a.progress.done} of ${a.progress.total} files read…` : `${a.docs} ${a.docs === 1 ? 'conversation or file' : 'conversations and files'}`}{a.source.last_sync ? (<span className="muted">· read {rel(a.source.last_sync)}</span>) : ''}</span>) : ''}
@@ -77,12 +78,17 @@ export function Memory() {
             {a.source && owner && (<Button variant="ghost" size="compact" onClick={() => forget(a)}>Disconnect</Button>)}
           </div>
           {a.id === 'chats' && (<span className="tiny muted">Claude.ai: Settings → Privacy → Export data. ChatGPT: Settings → Data controls → Export. Drop the zip here.</span>)}
-        </div>))}</div>)}
+        </div>))}</div>
+          {data.adapters.some((a) => !a.source) && (<div className="ai-more"><span className="small muted">Not connected</span>
+            {data.adapters.filter((a) => !a.source).map((a) => (<span key={a.id} className="ai-chip"><Icon n={ICON[a.id]}  /><span>{a.label}</span>
+              {a.id === 'chats' ? owner && <><Button variant="ghost" size="compact" onClick={() => imp.current.click()}>Add an export</Button><input type="file" accept=".zip,.json" hidden ref={imp} onChange={(e) => { if (e.target.files[0]) importFile(e.target.files[0]); e.target.value = ''; }}  /></>
+                : a.found ? owner && (<Button variant="ghost" size="compact" onClick={() => connect(a.id)}>Connect</Button>) : (<span className="tiny muted">not on this computer</span>)}</span>))}
+          </div>)}</>}
       </section>
-      <section className="section"><h2>How agents use it</h2>
+      <details className="section ai-how"><summary><h2>How agents use it</h2></summary>{/* the explanation, a click away */}
         <p className="small ink2" style={sx("max-width:70ch")}>Any agent connected to Trace over MCP (Settings → MCP & agents) can call <code>recall</code> to search this memory, gets the relevant passages inside <code>get_project_context</code>, and can leave a note for the next agent with <code>remember</code>. Map projects to their folders (project settings) and each AI’s work in those folders counts as that project’s memory.</p>
         <p className="small muted" style={sx("max-width:70ch")}>Secrets (API keys, tokens, passwords) are removed before anything is indexed. Agents receive these passages marked as quoted data, never as instructions. Disconnecting an AI forgets everything Trace read from it; its own files are never changed.</p>
-      </section>
+      </details>
     </div></>;
 }
 

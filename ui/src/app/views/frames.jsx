@@ -36,13 +36,13 @@ const px = (v) => (/px$/.test(v) ? String(Math.round(parseFloat(v) * 10) / 10) :
 const num = (n) => Number(n).toLocaleString();
 const walkFailed = (d) => !!d?.lastError && (!d.at || d.lastError.at > d.at); // the last walk broke and found nothing: the screens are from before
 
-export function FramesCanvas({ p, sha, title, live, edit }) {
+export function FramesCanvas({ p, sha, title, live, edit, openChecks }) {
   const [tab, setTab] = useState('screens');
   const code = useFetch(`/projects/${p.id}/history/${sha}/frames`);
   const shots = useFetch(`/projects/${p.id}/history/${sha}/screens`, ['history'], (t, d) => d.project_id === p.id && d.screens === sha && (!d.walking || /^Found/.test(d.walking.label || ''))); // a first walk's screens come in as they're found
   const pk = useFetch(`/projects/${p.id}/history/packages`, ['history'], (t, d) => d.project_id === p.id && !!d.install && d.install !== 'running');
   const q = useFetch(`/projects/${p.id}/history/${sha}/queue`, ['history', 'decision'], (t, d) => d.project_id === p.id && (t === 'decision' || (d.screens === sha && d.walking === null) || (d.stress === sha && d.stressing === null))); // checked again after a walk, a stress walk or a decision
-  const [checks, setChecks] = useState(false);
+  const [checks, setChecks] = useState(!!openChecks); // #/p/:id/history/checks opens on them
   const [walking, setWalking] = useState(null);
   const [focus, setFocus] = useState(null); // a component (or the type) to show in the design system
   const [goScreen, setGoScreen] = useState(null);
@@ -158,7 +158,7 @@ const Dot = ({ st }) => (<span className={cn('pl-d', st)} aria-hidden="true">{st
 // back. States nobody has seen come last, with the stress walk that forces them.
 const CK = { scope: 'Changed outside the ask', rule: 'Your rules, broken', broken: 'Decisions the code broke', flip: 'Nobody has decided', design: 'The design and the code apart', figma: 'Figma and the app', stress: 'Breaks', drift: 'Almost the same value' };
 const said = (t, n = 90) => (t && t.length > n ? `${t.slice(0, n - 1)}…` : t);
-function Checks({ p, sha, q, live, edit, onScreen, onReload, onClose }) {
+export function Checks({ p, sha, q, live, edit, onScreen, onReload, onClose }) {
   const [ask, setAsk] = useState(null); // { item, text }: a request being written to Claude
   const [stressing, setStressing] = useState(null);
   const box = useRef(null);
@@ -284,7 +284,7 @@ function Screens({ p, sha, d, live, edit, walking, title, catOf, comps, go, acts
     const b = box.current.getBoundingClientRect();
     setView({ k: clamp(Math.min(1, (b.width - 80) / Math.min(lay.w, lay.cw * 2 + GX + PAD * 2)), 0.35, 1), x: 16, y: below() });
   }, [lay]);
-  const below = () => Math.max(0, ...[...(box.current?.querySelectorAll('.sc-legend, .fr-notice') || [])].map((l) => l.offsetTop + l.offsetHeight)); // start under the group chips and a notice, not behind them
+  const below = () => Math.max(0, ...[...(box.current?.querySelectorAll('.fr-over') || [])].map((l) => l.offsetTop + l.offsetHeight)); // start under the group chips and a notice, not behind them
   const zoom = (f, e) => { const b = box.current.getBoundingClientRect(); const k = clamp(view.k * f, MINK, 2); const cx = e ? e.clientX - b.left : b.width / 2, cy = e ? e.clientY - b.top : b.height / 2; setView({ k, x: cx - ((cx - view.x) * k) / view.k, y: cy - ((cy - view.y) * k) / view.k }); };
   useEffect(() => {
     const el = box.current;
@@ -344,9 +344,19 @@ function Screens({ p, sha, d, live, edit, walking, title, catOf, comps, go, acts
   const order = list.filter((s) => lay.pos[s.id]);
   return (<>
     <div className="hx-canvas fr-canvas" ref={box} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} aria-label="Screens: drag to move around, Ctrl + wheel to zoom, arrow keys move between screens">
+      <div className="fr-over">{/* group chips, then a notice under them */}
       {groups.length > 0 && (<div className="sc-legend" role="navigation" aria-label="Groups of screens">
         {groups.map((g) => (<button key={g.id} type="button" className="sc-gchip" onClick={() => fitGroup(g)}><Icon n={GICON[g.kind] || 'app-window'} /><span className="trunc">{g.label}</span><span className="num muted">{g.ids.length}</span></button>))}
       </div>)}
+      {d.device && d.detected && d.device !== d.detected ? (<div className="fr-notice small" role="note">
+        <Icon n={FORM.find((f) => f.value === d.detected).icon} /><div className="col" style={sx('gap:4px;min-width:0')}><b>Walked as a {d.device}, but it’s built for {d.detected}s</b><span className="ink2">{whyOf(d)}. That’s the app’s own layout, so at this size it looks {d.detected === 'phone' ? 'like a phone column in an empty page' : 'stretched'}.</span>
+          {edit && (<div className="row" style={sx('gap:6px;margin-top:6px')}><Button variant="secondary" size="compact" leadingIcon={ph(FORM.find((f) => f.value === d.detected).icon)} onClick={() => onWalkAs(d.detected)}>Walk it as a {d.detected}</Button></div>)}</div>
+      </div>) : d.failed?.length > 0 && !quiet && (<div className="fr-notice small" role="note">
+        <Icon n="plugs" /><div className="col" style={sx('gap:4px;min-width:0')}><b>It asked for data that didn’t come</b><span className="ink2">Its screens show what it draws without it. {modes.length ? `Its scripts also run it in ${modes.join(' or ')} mode, which may bring its own data.` : 'Start what serves it (its API or backend) and walk again.'}</span>{d.failed.slice(0, 3).map((f) => (<span key={f} className="mono tiny muted trunc">{f}</span>))}
+          {modes.length > 0 && (<div className="row" style={sx('gap:6px;margin-top:6px')}>{modes.map((m) => (<Button key={m} variant="secondary" size="compact" leadingIcon={ph('play')} onClick={() => { setQuiet(true); onMode(m); }}>Run in {m} mode</Button>))}</div>)}</div>
+        <Button variant="ghost" size="icon-compact" className="shrink-0" aria-label="Hide" onClick={() => setQuiet(true)}><Icon n="x" size={14} /></Button>
+      </div>)}
+      </div>
       {view && (<div className={cn('hx-plane', glide && 'glide')} style={sx({ transform: `translate(${view.x}px, ${view.y}px) scale(${view.k})`, width: `${lay.w}px`, height: `${lay.h}px` })}>
         {lay.cols.map(([dep, x]) => (<span key={dep} className="sc-col" style={sx({ left: `${x}px`, top: `${TOP - 76}px`, width: `${lay.cw}px` })}><b>{dep === 0 ? 'Opens on' : `${dep} click${dep > 1 ? 's' : ''} in`}</b><span>{plural(order.filter((s) => lay.pos[s.id].depth === dep).length, 'screen')}</span></span>))}
         {groups.map((g) => (<div key={g.id} className="sc-group" style={sx({ left: `${g.x}px`, top: `${g.y}px`, width: `${g.w}px`, height: `${g.h}px` })}>
@@ -356,14 +366,6 @@ function Screens({ p, sha, d, live, edit, walking, title, catOf, comps, go, acts
         {order.map((s) => (<ScreenCard key={s.id} s={s} at={lay.pos[s.id]} sel={sel === s.id} hl={hl?.sid === s.id ? hl.rs : null} ready={ready} catOf={catOf} enter={fresh.indexOf(s.id)}
           onHover={(on) => setHov(on ? s.id : null)} onFold={() => toggleFold(s.id)}
           onHl={(rs) => setHl(rs ? { sid: s.id, rs } : null)} onComp={onComp} onAssemble={() => setAssemble({ s, at: 0 })} onPreview={() => setPreview(s)} onPick={() => setSel(sel === s.id ? null : s.id)} />))}
-      </div>)}
-      {d.device && d.detected && d.device !== d.detected ? (<div className="fr-notice small" role="note">
-        <Icon n={FORM.find((f) => f.value === d.detected).icon} /><div className="col" style={sx('gap:4px;min-width:0')}><b>Walked as a {d.device}, but it’s built for {d.detected}s</b><span className="ink2">{whyOf(d)}. That’s the app’s own layout, so at this size it looks {d.detected === 'phone' ? 'like a phone column in an empty page' : 'stretched'}.</span>
-          {edit && (<div className="row" style={sx('gap:6px;margin-top:6px')}><Button variant="secondary" size="compact" leadingIcon={ph(FORM.find((f) => f.value === d.detected).icon)} onClick={() => onWalkAs(d.detected)}>Walk it as a {d.detected}</Button></div>)}</div>
-      </div>) : d.failed?.length > 0 && !quiet && (<div className="fr-notice small" role="note">
-        <Icon n="plugs" /><div className="col" style={sx('gap:4px;min-width:0')}><b>It asked for data that didn’t come</b><span className="ink2">Its screens show what it draws without it. {modes.length ? `Its scripts also run it in ${modes.join(' or ')} mode, which may bring its own data.` : 'Start what serves it (its API or backend) and walk again.'}</span>{d.failed.slice(0, 3).map((f) => (<span key={f} className="mono tiny muted trunc">{f}</span>))}
-          {modes.length > 0 && (<div className="row" style={sx('gap:6px;margin-top:6px')}>{modes.map((m) => (<Button key={m} variant="secondary" size="compact" leadingIcon={ph('play')} onClick={() => { setQuiet(true); onMode(m); }}>Run in {m} mode</Button>))}</div>)}</div>
-        <Button variant="ghost" size="icon-compact" aria-label="Hide" onClick={() => setQuiet(true)}><Icon n="x" size={14} /></Button>
       </div>)}
       {view && order.length > 2 && (<MiniMap lay={lay} list={order} view={view} box={box} sel={sel} onCentre={centre} />)}
       {s0 && (<ScreenPanel s={s0} list={list} live={live} comps={comps} onHl={(rs) => setHl(rs ? { sid: s0.id, rs } : null)} onAssemble={(at = 0) => setAssemble({ s: s0, at })} onPreview={() => setPreview(s0)} onComp={onComp} onGo={goTo} onClose={() => setSel(null)} />)}

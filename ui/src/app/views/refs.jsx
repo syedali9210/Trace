@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo, api, useFetch, Icon, Empty, Error
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { AddLink } from './dialogs.jsx';
+import { changeText } from './home.jsx';
 import { Lightbox } from './journey.jsx';
 
 function RefBody({ r, onOpen }) {
@@ -14,7 +15,7 @@ function RefBody({ r, onOpen }) {
   return (<button className="rimg" onClick={() => onOpen(r)} aria-label={`Open ${r.title || 'reference'}`}><img src={fileUrl(r.thumb_key)} alt="" loading="lazy" draggable="false"  />{r.kind === 'video' ? (<span className="play"><Icon n="play"  /></span>) : ''}</button>);
 }
 
-function RefCard({ r, onSimilar, onEdit, onDelete, onPin, onOpen, dim, hit, canEdit }) {
+function RefCard({ r, onSimilar, onEdit, onDelete, onPin, onOpen, dim, hit, canEdit, name = '' }) {
   return (<article className={`card rcard${dim ? ' dim' : ''}${hit ? ' hit' : ''}`}>
     <RefBody r={r} onOpen={onOpen}  />
     <div className="b">
@@ -30,7 +31,7 @@ function RefCard({ r, onSimilar, onEdit, onDelete, onPin, onOpen, dim, hit, canE
       {r.note && r.kind !== 'note' && (<p className="tiny muted clamp2">{r.note}</p>)}
       {r.palette?.length > 0 && r.kind !== 'color' && (<div className="swatches" aria-label={`Palette: ${r.palette.join(', ')}`}>{r.palette.slice(0, 6).map((c, ki) => (<i key={c?.id ?? ki} style={sx({ background: c })} title={c}></i>))}</div>)}
       {r.kind === 'color' && (<code>{r.palette[0]}</code>)}
-      {r.links?.length > 0 && (<div className="col" style={sx("gap:2px")}>{r.links.map((l, ki) => (<a key={l?.id ?? ki} className="pinned trunc" href={`#/m/${l.moment_id}`}><Icon n="push-pin"  />{l.title}</a>))}</div>)}
+      {r.links?.length > 0 && (<div className="col" style={sx("gap:2px")}>{r.links.map((l, ki) => (<a key={l?.id ?? ki} className="pinned trunc" href={`#/m/${l.moment_id}`}><Icon n="push-pin"  />{changeText({ title: l.title }, name)}</a>))}</div>)}
       {r.grp && (<span className="tiny muted"><Icon n="folder-simple"  /> {r.grp}</span>)}
     </div>
   </article>);
@@ -113,8 +114,9 @@ export function References({ p }) {
   const moveRef = (id, pos) => api(`/references/${id}`, { method: 'PATCH', body: pos }).catch(fail);
   const KINDS = { image: ['image'], video: ['video'], link: ['link', 'embed'], note: ['note', 'color', 'font', 'file'] };
   const list = (data || []).filter((r) => (kind === 'all' || KINDS[kind].includes(r.kind)) && (pinned === 'all' || (pinned === 'yes') === (r.links?.length > 0)));
-  const card = (r) => (<RefCard r={r} canEdit={p.can_edit} onSimilar={findSimilar} onEdit={(x) => setDlg({ edit: x })} onDelete={del} onPin={(x) => setDlg({ pin: x })} onOpen={setOpen} dim={similar && !similar.ids.has(r.id)} hit={similar?.of === r.id}  />);
+  const card = (r) => (<RefCard r={r} name={p.name} canEdit={p.can_edit} onSimilar={findSimilar} onEdit={(x) => setDlg({ edit: x })} onDelete={del} onPin={(x) => setDlg({ pin: x })} onOpen={setOpen} dim={similar && !similar.ids.has(r.id)} hit={similar?.of === r.id}  />);
   const count = (k) => (data || []).filter((r) => KINDS[k].includes(r.kind)).length;
+  const kinds = [['image', 'Pictures'], ['video', 'Videos'], ['link', 'Links'], ['note', 'Notes']].filter(([k]) => count(k) > 0); // only the kinds there are
   return (<div className="col" style={sx("gap:12px;padding-top:16px")}>
     <div className="row wrap">
       <Seg label="View" value={mode} onChange={setMode} options={[{ value: 'grid', label: 'Grid', icon: 'squares-four' }, { value: 'canvas', label: 'Canvas', icon: 'frame-corners' }]}  />
@@ -126,7 +128,7 @@ export function References({ p }) {
         <Button variant="tertiary" size="compact" leadingIcon={ph("text-aa")} onClick={() => setDlg({ kind: 'font' })}>Font</Button></>}
     </div>
     {data?.length > 0 && (<div className="row wrap" style={sx("gap:8px")}>
-      <Seg label="Kind" value={kind} onChange={setKind} options={[{ value: 'all', label: `All ${data.length}` }, { value: 'image', label: `Pictures ${count('image')}` }, { value: 'video', label: `Videos ${count('video')}` }, { value: 'link', label: `Links ${count('link')}` }, { value: 'note', label: `Notes ${count('note')}` }]}  />
+      {kinds.length > 1 && (<Seg label="Kind" value={kind} onChange={setKind} options={[{ value: 'all', label: `All ${data.length}` }, ...kinds.map(([k, l]) => ({ value: k, label: `${l} ${count(k)}` }))]}  />)}
       <Seg label="Pinned" value={pinned} onChange={setPinned} options={[{ value: 'all', label: 'Any' }, { value: 'yes', label: 'Pinned to a change' }, { value: 'no', label: 'Not pinned' }]}  />
     </div>)}
     {error && (<ErrorBox error={error} retry={reload}  />)}

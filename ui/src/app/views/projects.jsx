@@ -13,7 +13,8 @@ export function Projects() {
   const { data, error, reload } = useFetch('/feed', ['moment', 'project', 'issue']);
   const me = useMe();
   const all = data?.projects || [];
-  const ps = all.filter((p) => !q || `${p.name} ${p.stands || ''}`.toLowerCase().includes(q.toLowerCase()));
+  const needs = (p) => (p.open_reviews || 0) + (p.tasks?.length || 0) > 0;
+  const ps = all.filter((p) => !q || `${p.name} ${p.stands || ''}`.toLowerCase().includes(q.toLowerCase())).sort((a, b) => needs(b) - needs(a)); // what needs you first, then the newest
   return <><Header actions={(<TopActions review={me?.inbox} view="projects" />)}>
       <b>Projects</b>{all.length > 0 && (<span className="hd-sub">{all.length}</span>)}
       <label className="searchbar" style={sx('margin-left:auto;margin-right:auto')}><Icon n="magnifying-glass" /><span className="sr">Search projects</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search projects…" /></label>

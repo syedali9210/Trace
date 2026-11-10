@@ -25,6 +25,7 @@ const jobs = new Map(); // `${pid}:${sha}` → { done, total, label } while a wa
 const fileOf = (pid, sha) => { if (!/^(now|[0-9a-f]{7,40})$/i.test(sha)) throw err(400, 'That isn’t a version id.'); return path.join(DATA, 'screens', pid, `${sha === 'now' ? 'now' : sha.slice(0, 12)}.json`); };
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
+export const screenCount = (pid, sha = 'now') => { try { return JSON.parse(readFileSync(fileOf(pid, sha), 'utf8')).screens?.length || 0; } catch { return 0; } }; // how many screens its last walk found, without reading them
 export function screens(p, sha) {
   let data = null;
   try { data = JSON.parse(readFileSync(fileOf(p.id, sha), 'utf8')); } catch {}

@@ -216,7 +216,7 @@ function RefsCard({ m, pid, refs, canEdit, reload }) {
     {refs.length ? (<div className="refgrid">{refs.map((r, ki) => (<figure key={r?.id ?? ki}>
         <Pics items={[r]} label={r.title} size="lg"  />
         <figcaption><span className="trunc">{r.title || r.kind}</span><span className="tiny muted">{r.by === 'prompt' ? 'From your prompt' : r.by === 'you' ? 'Pinned by you' : r.by}</span></figcaption>
-        {canEdit && (<Button variant="ghost" size="icon-compact" className="unpin absolute top-1 right-1 size-[22px] bg-card/90" aria-label={`Unpin ${r.title}`} title="Unpin" onClick={() => unpin(r)}><Icon n="x" size={15} /></Button>)}
+        {canEdit && (<Button variant="ghost" size="icon-compact" className="unpin absolute top-1 right-1 size-[24px] bg-card/90" aria-label={`Unpin ${r.title}`} title="Unpin" onClick={() => unpin(r)}><Icon n="x" size={15} /></Button>)}
       </figure>))}</div>)
     : (<p className="small muted">Pin the pictures and videos that shaped this change. Ones you paste into a prompt to your AI land here by themselves.</p>)}
     <input type="file" hidden multiple accept="image/*,video/*" ref={file} onChange={(e) => { upload(e.target.files); e.target.value = ''; }}  />
@@ -238,6 +238,7 @@ export function Moment({ id, focus }) {
   const { data: m, error, loading, reload } = useFetch(`/moments/${id}`, ['moment', 'comment', 'artifact', 'reference', 'memory'], (t, d) => t === 'memory' || d.id === id || d.target_id === id || d.moment_id === id || t === 'artifact' || t === 'comment' || t === 'reference');
   const me = useMe();
   const [sel, setSel] = useState(null);
+  const [allPics, setAllPics] = useState(false); // the strip shows one row until asked for the rest
   const [view, setView] = useState('picture'); // a drawn component: picture, live or code
   const [region, setRegion] = useState(null);
   const [pinning, setPinning] = useState(false);
@@ -272,7 +273,7 @@ export function Moment({ id, focus }) {
     </Header>
     <div className="content wide"><div className="mdetail">
       <div className="col" style={sx("gap:12px")}>
-        {visuals.length > 1 && (<div className="vstrip" role="tablist" aria-label="Pictures in this change">{visuals.map((v, ki) => (<button key={v?.id ?? ki} role="tab" aria-selected={v.id === a?.id} title={v.name} onClick={() => setSel(v.id)}><img src={fileUrl(v.after.thumb_key || v.after.image_key)} alt={v.name} loading="lazy"  /></button>))}</div>)}
+        {visuals.length > 1 && (<div className="vstrip" role="tablist" aria-label="Pictures in this change">{visuals.filter((v, i) => allPics || i < 8 || v.id === a?.id).map((v, ki) => (<button key={v?.id ?? ki} role="tab" aria-selected={v.id === a?.id} title={v.name} onClick={() => setSel(v.id)}><img src={fileUrl(v.after.thumb_key || v.after.image_key)} alt={v.name} loading="lazy"  /></button>))}{visuals.length > 8 && (<button type="button" className="vmore" aria-expanded={allPics} onClick={() => setAllPics(!allPics)}>{allPics ? 'Fewer' : `+${visuals.length - 8} more`}</button>)}</div>)}
         {drawn && (<div className="row wrap between"><Seg label="Show the component" value={view} onChange={setView} options={[{ value: 'picture', label: 'Drawn', icon: 'image' }, { value: 'live', label: 'Live', icon: 'play' }, { value: 'code', label: 'Code', icon: 'code' }]}  /><span className="small muted">{comp.mode === 'app' ? 'Drawn inside the app, with this version of the file' : `Drawn from the code: ${comp.names.join(', ')}`}</span></div>)}
         {comp?.error && (<p className="note small">Couldn’t draw this component: {comp.error} The code change is below.</p>)}
         {a && drawn && view === 'live' ? (<LivePair a={a}  />) : a && (video ? (<div className="viewer"><video className="vplay" src={fileUrl(a.after.file_key)} poster={fileUrl(a.after.image_key)} controls playsInline></video></div>)

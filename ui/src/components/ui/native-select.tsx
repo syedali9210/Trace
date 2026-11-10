@@ -1,60 +1,59 @@
 import * as React from "react"
 import { cn } from "cn"
-import { ChevronDownIcon } from "lucide-react"
+import { Select, SelectTrigger, SelectContent, SelectItem } from "./select"
 
+// The app's selects keep the <select> API (value, onChange(e) → e.target.value, <NativeSelectOption> children) but
+// open the design system's list, never the OS one (TASTE: no OS-native dropdown lists). An empty option that reads
+// like a prompt ("Move to…") is the placeholder; any other empty option ("All tools") is a choice like the rest.
 type NativeSelectProps = Omit<React.ComponentProps<"select">, "size"> & {
   size?: "sm" | "default"
 }
+type Opt = { value: string; text: string; disabled?: boolean }
+const NONE = "\u0000none" // stands in for "" while it's a real choice: the list maps "" to "nothing picked"
 
-function NativeSelect({
-  className,
-  size = "default",
-  ...props
-}: NativeSelectProps) {
-  return (
-    <div
-      className={cn(
-        "group/native-select relative w-fit has-[select:disabled]:opacity-50",
-        className
-      )}
-      data-slot="native-select-wrapper"
-      data-size={size}
-    >
-      <select
-        data-slot="native-select"
-        data-size={size}
-        className="h-8 w-full min-w-0 appearance-none rounded-lg border border-input bg-transparent py-1 pr-8 pl-2.5 text-sm transition-colors outline-none select-none selection:bg-primary selection:text-primary-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] data-[size=sm]:py-0.5 dark:bg-input/30 dark:hover:bg-input/50 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40"
-        {...props}
-      />
-      <ChevronDownIcon className="pointer-events-none absolute top-1/2 right-2.5 size-4 -translate-y-1/2 text-muted-foreground select-none" aria-hidden="true" data-slot="native-select-icon" />
-    </div>
-  )
+const textOf = (n: React.ReactNode): string =>
+  typeof n === "string" || typeof n === "number" ? String(n)
+    : Array.isArray(n) ? n.map(textOf).join("")
+    : React.isValidElement(n) ? textOf((n.props as { children?: React.ReactNode }).children) : ""
+
+function optionsOf(children: React.ReactNode, out: Opt[] = []) {
+  React.Children.forEach(children, (c) => {
+    if (!React.isValidElement(c)) return
+    const pr = c.props as { value?: unknown; children?: React.ReactNode; disabled?: boolean }
+    if (c.type === NativeSelectOption) out.push({ value: String(pr.value ?? textOf(pr.children)), text: textOf(pr.children), disabled: pr.disabled })
+    else if (pr.children) optionsOf(pr.children, out) // optgroups, fragments
+  })
+  return out
 }
 
-function NativeSelectOption({
-  className,
-  ...props
-}: React.ComponentProps<"option">) {
+const NativeSelect = React.forwardRef<HTMLButtonElement, NativeSelectProps>(function NativeSelect(
+  { className, size, value, defaultValue, onChange, children, disabled, style, id, onClick, ...rest }, ref) {
+  const opts = optionsOf(children)
+  const blank = opts.find((o) => o.value === "")
+  const prompt = blank && /…$/.test(blank.text.trim()) ? blank.text : null
+  const items = opts.filter((o) => o.value !== "" || !prompt).map((o) => (o.value === "" ? { ...o, value: NONE } : o))
+  const show = (v: unknown) => (v === undefined ? undefined : String(v) === "" ? (prompt ? "" : NONE) : String(v))
+  const pick = (v: string) => {
+    const out = v === NONE ? "" : v
+    onChange?.({ target: { value: out }, currentTarget: { value: out } } as unknown as React.ChangeEvent<HTMLSelectElement>)
+  }
   return (
-    <option
-      data-slot="native-select-option"
-      className={cn("bg-[Canvas] text-[CanvasText]", className)}
-      {...props}
-    />
+    <Select value={show(value)} defaultValue={show(defaultValue)} onValueChange={pick} disabled={disabled} size={size === "sm" || /\bsm\b/.test(className ?? "") ? "compact" : undefined}>
+      <SelectTrigger ref={ref} id={id} style={style} onClick={onClick as unknown as React.MouseEventHandler<HTMLButtonElement>}
+        className={cn("min-w-0", className)} aria-label={rest["aria-label"]} placeholder={prompt ?? "Choose…"} />
+      <SelectContent>
+        {items.map((o, i) => (<SelectItem key={o.value} index={i} value={o.value} disabled={o.disabled}>{o.text}</SelectItem>))}{/* plain text, so the trigger can name the pick */}
+      </SelectContent>
+    </Select>
   )
+})
+
+function NativeSelectOption(props: React.ComponentProps<"option">) {
+  return <option {...props} /> // read by NativeSelect, never drawn
 }
 
-function NativeSelectOptGroup({
-  className,
-  ...props
-}: React.ComponentProps<"optgroup">) {
-  return (
-    <optgroup
-      data-slot="native-select-optgroup"
-      className={cn("bg-[Canvas] text-[CanvasText]", className)}
-      {...props}
-    />
-  )
+function NativeSelectOptGroup({ children }: React.ComponentProps<"optgroup">) {
+  return <>{children}</>
 }
 
 export { NativeSelect, NativeSelectOptGroup, NativeSelectOption }

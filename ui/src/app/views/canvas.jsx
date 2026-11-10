@@ -23,7 +23,7 @@ function BlockCard({ b, at }) {
   const s = b.summary;
   const n = s.count == null ? null : at ? s.ts.filter((t) => t <= at).length + (s.count - s.ts.length) : s.count;
   const pics = s.images.slice(0, b.size === '2x2' || b.size === '2x1' ? 4 : 2);
-  const foot = s.stat || (s.count ? plural(s.count, b.id === 'work' ? 'iteration' : 'item') : s.stickies ? plural(s.stickies, 'note') : s.count === 0 ? 'Empty so far' : b.hint);
+  const foot = b.id === 'casestudy' && s.readiness != null ? null : s.stat || (s.count ? null : s.stickies ? plural(s.stickies, 'note') : s.count === 0 ? 'Empty so far' : b.hint); // the corner already counts it
   if (b.id === 'overview') return <><div className="blk-h"><span className="blk-ico"><Icon n={b.icon}  /></span><span className="blk-t trunc">{b.title}</span></div>
     <div className="ov">{pics[0] && (<div className="ov-shot"><img src={fileUrl(pics[0].image_key || pics[0].thumb_key)} alt="" draggable="false"  /></div>)}
       <ul className="blk-lines">{s.lines.map((l, ki) => (<li key={l?.id ?? ki} className="clamp2">{l}</li>))}</ul></div>

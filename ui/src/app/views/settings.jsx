@@ -39,10 +39,12 @@ function Ai() {
   const check = async () => { setTest({ busy: true }); try { setTest(await api('/ai/test', { method: 'POST' })); } catch (e) { setTest({ error: e.message }); } };
   const addKey = async (e) => { e.preventDefault(); try { await save({ key }); setKey(''); toast('Key saved'); check(); } catch (er) { fail(er); } };
   return (<section className="section"><h1>AI</h1>
-    <p className="small muted">It runs on Vercel’s AI Gateway with your key, through the same tools your agents use over MCP. Nothing is sent anywhere until you add one. With a key, it:</p>
-    <ul className="ai-uses small"><li><b>Ask</b> (beside the + at the bottom, or Ctrl J): answers from every project, its folders and code, and your AIs’ memory, aware of the page you’re on</li><li><b>Where it stands</b>: keeps each project’s summary in sync with its work, folders and agent sessions</li><li><b>Find the why</b> on a change, from the AI sessions and comments around it</li><li><b>Draft open answers</b> in the case study, from their evidence</li><li><b>Suggest tasks</b> from open reviews, on the to-do board</li><li><b>Find insights</b> between a project’s blocks on the canvas</li><li><b>Draft the brief</b> from the project’s docs and work</li></ul>
     <div className="ai-state"><span className={`dot ${data.ready ? 'on' : ''}`}></span><b className="small">{data.ready ? `Connected · key ${data.hint}${data.from_env ? ' (from AI_GATEWAY_API_KEY)' : ''}` : 'Not connected yet'}</b><span className="grow"></span>{data.ready && (<Button variant="tertiary" size="compact" onClick={check} aria-disabled={test?.busy}>{test?.busy ? 'Testing…' : 'Test the connection'}</Button>)}</div>
     {test && !test.busy && (<div className={test.error ? 'errbox small' : 'note small'} role="status">{test.error || `Answered “${test.reply}” in ${(test.ms / 1000).toFixed(1)}s from ${test.model}.`}</div>)}
+    <details className="fold" open={!data.ready}><summary className="small">What it does with a key</summary>{/* the state first, the explanation a click away once it works */}
+    <p className="small muted">It runs on Vercel’s AI Gateway with your key, through the same tools your agents use over MCP. Nothing is sent anywhere until you add one. With a key, it:</p>
+    <ul className="ai-uses small"><li><b>Ask</b> (beside the + at the bottom, or Ctrl J): answers from every project, its folders and code, and your AIs’ memory, aware of the page you’re on</li><li><b>Where it stands</b>: keeps each project’s summary in sync with its work, folders and agent sessions</li><li><b>Find the why</b> on a change, from the AI sessions and comments around it</li><li><b>Draft open answers</b> in the case study, from their evidence</li><li><b>Suggest tasks</b> from open reviews, on the to-do board</li><li><b>Find insights</b> between a project’s blocks on the canvas</li><li><b>Draft the brief</b> from the project’s docs and work</li></ul>
+    </details>
     <form className="col" onSubmit={addKey}>
       <Field label="Vercel AI Gateway API key" hint="vercel.com → AI Gateway → API keys. Stored encrypted on this computer, apart from your data. Free keys get new credits every 30 days."><div className="row"><Input className="grow" type="password" autoComplete="off" spellCheck="false" aria-label="API key" placeholder={data.hint && !data.from_env ? `Replace the key (${data.hint})` : 'Paste the key'} value={key} onChange={(e) => setKey(e.target.value)} /><Button variant="primary" size="compact" disabled={!key.trim()}>Save the key</Button></div></Field>
     </form>
@@ -139,6 +141,9 @@ function Sources() {
   if (!data) return (<Loading h={300}  />);
   return <><section className="section"><header><h1 className="grow">Sources</h1></header>
       <p className="small muted">Connect a tool once and Trace captures in the background. Only the files, repos and folders you pick are read. Pause anything with one click.</p>
+      <div className="col">{data.sources.filter((s) => s.tool !== 'aimem').map((s) => (<SourceRow s={s} projects={data.projects} reload={reload} key={s.id}  />))}</div>
+    </section>
+    <section className="section"><header><h2 className="grow">Add a source</h2></header>{/* what works first; how to add more after */}
       <div className="connect-grid">{data.catalog.map((c, ki) => (<div key={c?.id ?? ki} className={`card src k-${c.tool}`} style={sx("grid-template-columns:auto 1fr")}>
         <span className="ico"><Icon n={TOOLS[c.tool]?.icon}  /></span>
         <div className="col" style={sx("gap:4px")}><b>{c.label}</b><span className="tiny muted">{c.how}</span><span className="tiny">{c.gets}</span><span className="tiny muted">Fidelity: {c.fidelity}</span>
@@ -147,9 +152,6 @@ function Sources() {
           {c.tool === 'agent' && (<Button variant="tertiary" size="compact" style={sx("align-self:flex-start;margin-top:4px")} render={<a href="#/settings/mcp" />}>Get a token</Button>)}
           {c.tool === 'upload' && (<span className="tiny muted" style={sx("margin-top:4px")}>Always on: drop or paste anywhere.</span>)}
         </div></div>))}</div>
-    </section>
-    <section className="section"><header><h2 className="grow">Connected</h2></header>
-      <div className="col">{data.sources.filter((s) => s.tool !== 'aimem').map((s) => (<SourceRow s={s} projects={data.projects} reload={reload} key={s.id}  />))}</div>
     </section>
     {connect === 'link' && (<AddLink onClose={() => setConnect(null)}  />)}
     {connect && connect !== 'link' && (<ConnectForm tool={connect} projects={data.projects} onClose={() => setConnect(null)} onDone={() => { reload(); refreshMe(); }}  />)}</>;
@@ -276,6 +278,7 @@ function Privacy() {
   const settings = useFetch('/settings');
   const [confirm, setConfirm] = useState('');
   const [dnc, setDnc] = useState({});
+  const [more, setMore] = useState([]); // projects you opened a list for
   if (!settings.data) return (<Loading  />);
   const owner = settings.data.role === 'owner';
   const saveDnc = (p) => api(`/projects/${p.id}`, { method: 'PATCH', body: { do_not_capture: (dnc[p.id] ?? (p.do_not_capture || []).join('\n')).split('\n').map((x) => x.trim()).filter(Boolean) } }).then(() => toast('Saved')).catch(fail);
@@ -292,8 +295,9 @@ function Privacy() {
         <li>Agents get read-only access unless you grant writes; every call is logged.</li>
       </ul>
     </section>
-    <section className="section"><h2>Do-not-capture lists</h2>
-      {settings.data.projects.map((p, ki) => (<Field key={p?.id ?? ki} label={p.name} hint="One pattern per line; * matches anything"><div className="row" style={sx("align-items:flex-start")}><Textarea className="mono" rows="2" value={dnc[p.id] ?? (p.do_not_capture || []).join('\n')} onChange={(e) => setDnc({ ...dnc, [p.id]: e.target.value })}></Textarea><Button variant="tertiary" size="compact" disabled={!owner} onClick={() => saveDnc(p)}>Save</Button></div></Field>))}
+    <section className="section"><h2>Do-not-capture lists</h2><p className="small muted">Files that match a project’s patterns are never captured.</p>
+      {settings.data.projects.filter((p) => p.do_not_capture?.length || more.includes(p.id)).map((p, ki) => (<Field key={p?.id ?? ki} label={p.name} hint="One pattern per line; * matches anything"><div className="row" style={sx("align-items:flex-start")}><Textarea className="mono" rows="2" value={dnc[p.id] ?? (p.do_not_capture || []).join('\n')} onChange={(e) => setDnc({ ...dnc, [p.id]: e.target.value })}></Textarea><Button variant="tertiary" size="compact" disabled={!owner} onClick={() => saveDnc(p)}>Save</Button></div></Field>))}
+      {owner && settings.data.projects.some((p) => !p.do_not_capture?.length && !more.includes(p.id)) && (<NativeSelect className="sm" style={sx('width:auto;align-self:flex-start')} aria-label="Add a list for a project" value="" onChange={(e) => e.target.value && setMore([...more, e.target.value])}><NativeSelectOption value="">Add a list for a project…</NativeSelectOption>{settings.data.projects.filter((p) => !p.do_not_capture?.length && !more.includes(p.id)).map((p) => (<NativeSelectOption key={p.id} value={p.id}>{p.name}</NativeSelectOption>))}</NativeSelect>)}
     </section>
     <section className="section"><h2>Export everything</h2>
       <p className="small muted">A zip with every record as JSON and every captured file. Tokens are never included.</p>

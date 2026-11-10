@@ -95,7 +95,7 @@ export function Inbox({ focus }) {
     } catch (e) { fail(e); }
   };
   const projects = me?.projects || [];
-  return <><Header actions={(<span className="keys" aria-hidden="true"><span><kbd>J</kbd><kbd>K</kbd> move</span><span><kbd>A</kbd> accept</span><span><kbd>M</kbd> file</span><span><kbd>X</kbd> select</span></span>)}>
+  return <><Header actions={data?.length > 0 && (<span className="keys" aria-hidden="true"><span><kbd>J</kbd><kbd>K</kbd> move</span><span><kbd>A</kbd> accept</span><span><kbd>M</kbd> file</span><span><kbd>X</kbd> select</span></span>)}>
       <b>Review</b>{data && (<span className="hd-sub">{data.filter((m) => m.status === 'draft').length} to file</span>)}</Header>
     <div className="content">
       {error && (<ErrorBox error={error} retry={reload}  />)}
