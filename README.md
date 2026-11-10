@@ -75,6 +75,17 @@ Changelogs are written by rules from the diff ("Decreased font size. Changed col
 
 **What your chats say** (a project's AI memory, and behind its decks, decisions and artifacts). Trace reads each Claude Code session of the project whole: what you asked and how you said it, what Claude replied, what it reasoned, and which files it changed for each ask. By rules, not a model, it finds the rules you set ("never introduce a new arbitrary value", "dont use strokes anywhere in the site"), what you said no to and what it was about, what you kept ("bro its good now"), why things broke (Claude's words, from its replies and its reasoning, not its guesses), results in numbers ("cut the app's code from 26.9 MB to 9.8 MB") and what it made (the films, docs and pictures it linked that are still there). Each with its day, its chat and its files, the strongest first. A session is streamed once and cached by its size and time (a 500 MB chat: about 5 s once, then instant). Other tools' chats bring their asks and the AI's last word from the memory index.
 
+## Thinking: your reasons, and the story they make (project → Thinking)
+
+The work shows *what* changed. Thinking keeps *why*, in your own words, and turns it into the story you tell about the project.
+
+- **Why did you make this change?** Every change waits here until you answer it in a sentence or two. A change your agent made still gets asked: its reasons are in `explain_changes`, but why you asked for it is yours. Trace’s guess is shown as a hint, never as your answer.
+- **Thoughts.** Drop one any time: what you noticed, a doubt, a wrong turn. Type it in the box, or tell your coding agent `thought: …` and it files your words with `add_thought`.
+- **Story.** Your words, laid out like a film. The problem is the villain and gets 35% of the talk: where it starts small, the world around it, how it grows. Then the turn (what you tried first, how your thinking changed), the hero (the idea that beats this villain), behind the scenes (what went wrong, the wrong calls and how you fixed them), how it fits the way people already work, and the business goal it moves. Pick a talk length and each part gets its minutes; empty parts ask their question. Download it as markdown.
+- **Reminders.** The Thinking tab counts the changes waiting for your why, and the page says when you haven’t dropped a thought for three days. Agents get the same reminder from `get_thinking`, ask you one question at a time, and never fill a part with their own guess.
+
+Nothing here is written by a model. A thought’s part of the story is guessed from its words by rules, and you can change it.
+
 ## Trace's AI (optional: Settings → AI)
 
 Add a **Vercel AI Gateway** key in Settings → AI (or set `AI_GATEWAY_API_KEY`). The default model is `nvidia/nemotron-3.5-lightning-free` (free on the gateway); any gateway model works, as `provider/model`. The key is stored encrypted on this computer. Without a key the AI buttons stay hidden (Ask explains how to turn it on) and the rules engines carry on as before.

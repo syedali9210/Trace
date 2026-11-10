@@ -35,6 +35,7 @@ import * as SC from './screens.js';
 import * as CHK from './check.js';
 import * as DS from './design.js';
 import * as STRESS from './stress.js';
+import * as TH from './thinking.js';
 
 // The app: the built React app (ui/, shadcn + Fluid Functionalism; npm run build:ui), else the old no-build one.
 const WEB = existsSync(path.join(ROOT, 'ui', 'dist', 'index.html')) ? path.join(ROOT, 'ui', 'dist') : path.join(ROOT, 'web');
@@ -401,6 +402,7 @@ r('GET', '/api/projects/:id', 'read', async ({ params, need, user }) => {
   if (!p) throw err(404, 'No such project');
   const counts = {};
   for (const [k, sql] of Object.entries({ timeline: "SELECT COUNT(*) n FROM moment WHERE project_id=? AND status='accepted' AND exploration_id IS NULL", references: 'SELECT COUNT(*) n FROM reference WHERE project_id=?', files: 'SELECT COUNT(*) n FROM asset WHERE project_id=?', decisions: 'SELECT COUNT(*) n FROM decision WHERE project_id=?', issues: "SELECT COUNT(*) n FROM issue WHERE project_id=? AND status IN ('open','in_progress')", proposals: "SELECT COUNT(*) n FROM proposal WHERE project_id=? AND status IN ('open','changes_requested')", artifacts: "SELECT COUNT(*) n FROM artifact WHERE project_id=? AND status IN ('proposed','working','queued')", explorations: "SELECT COUNT(*) n FROM exploration WHERE project_id=? AND status='open'" })) counts[k] = get(sql, p.id).n;
+  counts.why_open = TH.nudge(p.id).open; // changes waiting for your why (the Thinking view)
   return {
     ...projectCard(p), counts,
     people: all('SELECT DISTINCT actor_name name, agent FROM moment WHERE project_id=? AND status=? LIMIT 30', p.id, 'accepted'),
@@ -434,7 +436,7 @@ r('DELETE', '/api/projects/:id', 'admin', ({ params, user }) => {
     run('DELETE FROM moment WHERE project_id=? OR (project_id IS NULL AND route_guess=?)', id, id);
     run('DELETE FROM snapshot WHERE asset_id IN (SELECT id FROM asset WHERE project_id=?)', id);
     run('DELETE FROM ref_link WHERE ref_id IN (SELECT id FROM reference WHERE project_id=?)', id);
-    for (const t of ['asset', 'comment', 'reference', 'decision', 'exploration', 'proposal', 'issue', 'artifact', 'deck', 'guest_link', 'summary', 'project_member', 'route_rule']) run(`DELETE FROM ${t} WHERE project_id=?`, id);
+    for (const t of ['asset', 'comment', 'reference', 'decision', 'exploration', 'proposal', 'issue', 'artifact', 'deck', 'guest_link', 'summary', 'project_member', 'route_rule', 'thought']) run(`DELETE FROM ${t} WHERE project_id=?`, id);
     run('DELETE FROM search_fts WHERE project_id=?', id);
     run("DELETE FROM edge WHERE (to_type='project' AND to_id=?)", id);
     run('DELETE FROM project WHERE id=?', id);
@@ -1402,6 +1404,25 @@ r('GET', '/api/projects/:id/case-study.md', 'read', ({ params, need, origin, res
   const p = projectOr404(params.id);
   res.writeHead(200, { 'content-type': 'text/markdown; charset=utf-8', 'content-disposition': `attachment; filename="${p.name.replace(/[^\w.-]+/g, '-')}-case-study.md"` });
   res.end(CS.markdown(CS.assemble(p), origin));
+}, { guest: true });
+
+// ---- thinking: your reasons, in your words, and the story they make (server/thinking.js) ----
+const talkMinutes = (v) => Math.min(60, Math.max(3, parseInt(v, 10) || 10));
+const thoughtOr404 = (id) => { const t = get('SELECT * FROM thought WHERE id=?', id); if (!t) throw err(404, 'No such thought'); return t; };
+r('GET', '/api/projects/:id/thinking', 'read', ({ params, query, need }) => { need('read', params.id); return TH.view(projectOr404(params.id), talkMinutes(query.minutes)); }, { guest: true });
+r('POST', '/api/projects/:id/thoughts', 'edit', ({ params, body, user, need }) => {
+  need('edit', params.id); projectOr404(params.id);
+  const t = TH.add(params.id, { text: body.text, kind: body.kind, beat: body.beat, moment_id: body.moment_id, question: body.question, by: 'you', author: user.name });
+  broadcast('thought', { id: t.id, project_id: params.id });
+  return t;
+});
+r('PATCH', '/api/thoughts/:id', 'edit', ({ params, body, need }) => { const t = thoughtOr404(params.id); need('edit', t.project_id); const out = TH.edit(t.id, body, 'you'); broadcast('thought', { id: t.id, project_id: t.project_id }); return out; });
+r('DELETE', '/api/thoughts/:id', 'edit', ({ params, need }) => { const t = thoughtOr404(params.id); need('edit', t.project_id); TH.remove(t.id); broadcast('thought', { id: t.id, project_id: t.project_id }); });
+r('GET', '/api/projects/:id/story.md', 'read', ({ params, query, need, res }) => {
+  need('read', params.id);
+  const p = projectOr404(params.id);
+  res.writeHead(200, { 'content-type': 'text/markdown; charset=utf-8', 'content-disposition': `attachment; filename="${p.name.replace(/[^\w.-]+/g, '-')}-story.md"` });
+  res.end(TH.markdown(p, talkMinutes(query.minutes)));
 }, { guest: true });
 
 // ---- artifacts you add by hand, and previews of any artifact ----

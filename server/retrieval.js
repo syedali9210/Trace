@@ -194,9 +194,11 @@ export async function contextPack({ project_id, focus, token_budget = 8000, orig
     related_to_focus: related.map(({ kind, id, title, via, link }) => ({ kind, id, title, via, link: origin + link })),
     design_tokens: designTokens(project_id),
     ai_memory: await aiMemory(p, focus, projects),
+    // The person's own reasons, in their words (the Thinking view): why they made changes, and thoughts they dropped.
+    the_persons_reasons: all('SELECT t.kind, t.text, t.beat, t.created_at, m.title change FROM thought t LEFT JOIN moment m ON m.id=t.moment_id WHERE t.project_id=? ORDER BY t.created_at DESC LIMIT 15', project_id).map((t) => ({ ...t, text: dataSafe(t.text) })),
   };
   // Fit the budget: drop the least important tail first.
-  const order = ['related_to_focus', 'ai_memory', 'open_comments', 'references', 'recent_moments', 'current_state', 'open_issues', 'decisions'];
+  const order = ['related_to_focus', 'ai_memory', 'open_comments', 'references', 'recent_moments', 'current_state', 'open_issues', 'the_persons_reasons', 'decisions'];
   let guard = 0;
   while (est(pack) > token_budget && guard++ < 400) {
     const k = order.find((key) => Array.isArray(pack[key]) && pack[key].length > (key === 'decisions' ? 5 : 1));

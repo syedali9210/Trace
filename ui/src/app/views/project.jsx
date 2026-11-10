@@ -18,6 +18,7 @@ import { Artifacts } from './artifacts.jsx';
 import { References } from './refs.jsx';
 import { Workflow } from './workflow.jsx';
 import { Todo } from './todo.jsx';
+import { Thinking } from './thinking.jsx';
 
 export function MomentCard({ m, hero }) {
   const a = m.assets[0];
@@ -281,11 +282,11 @@ function ProjectSettings({ p, onClose, reload }) {
 
 // A project opens on its timeline (NCS). History (every version on a canvas) fills the window like it; the other
 // views (the canvas of blocks, the case study, and the rest in ⋯) share one quiet bar: back, the name, the switcher.
-const VIEWS = [['timeline', 'Timeline', 'rows'], ['history', 'History', 'git-commit'], ['canvas', 'Canvas', 'squares-four'], ['casestudy', 'Case study', 'book-open-text']];
+const VIEWS = [['timeline', 'Timeline', 'rows'], ['history', 'History', 'git-commit'], ['canvas', 'Canvas', 'squares-four'], ['casestudy', 'Case study', 'book-open-text'], ['thinking', 'Thinking', 'lightbulb']];
 const MORE = [['design', 'Design', 'cursor-click'], ['artifacts', 'Artifacts', 'sparkle'], ['references', 'References', 'images'], ['issues', 'To do', 'check-square'], ['tree', 'Tree', 'tree-structure'], ['memory', 'AI memory', 'brain'], ['decisions', 'Decisions', 'seal-check'], ['proposals', 'Proposals', 'git-pull-request'], ['files', 'Files', 'files'], ['decks', 'Decks', 'presentation'], ['workflow', 'Workflow', 'flow-arrow']];
 
 export function Project({ id, tab, sub }) {
-  const { data: p, error, loading, reload } = useFetch(`/projects/${id}`, ['project', 'moment', 'decision', 'issue', 'proposal', 'artifact', 'reference'], (t, d) => !d.project_id || d.project_id === id || d.id === id);
+  const { data: p, error, loading, reload } = useFetch(`/projects/${id}`, ['project', 'moment', 'decision', 'issue', 'proposal', 'artifact', 'reference', 'thought'], (t, d) => !d.project_id || d.project_id === id || d.id === id);
   const [dlg, setDlg] = useState(() => (location.hash.includes('settings=1') ? 'settings' : null));
   const narrow = useNarrow(); // on a phone the view switch is icons only: it fits, nothing scrolls sideways
   if (error) return <><Header><a href="#/projects">Projects</a></Header><div className="content"><ErrorBox error={error} retry={reload}  /></div></>;
@@ -295,7 +296,7 @@ export function Project({ id, tab, sub }) {
   const draft = async () => { try { const r = await api(`/projects/${id}/brief/draft`, { method: 'POST' }); await api(`/projects/${id}`, { method: 'PATCH', body: { brief: r.brief } }); reload(); toast('Started a brief from the work. Edit it in project settings.'); } catch (e) { fail(e); } };
   const more = MORE.find((m) => m[0] === view);
   const switcher = (<div className="pswitch">
-    <Seg size="compact" label="View" value={VIEWS.some((v) => v[0] === view) ? view : null} onChange={(v) => go(`/p/${id}/${v}`)} options={VIEWS.map(([value, label, icon]) => ({ value, label, ...(narrow ? { icon } : {}) }))}  />
+    <Seg size="compact" label="View" value={VIEWS.some((v) => v[0] === view) ? view : null} onChange={(v) => go(`/p/${id}/${v}`)} options={VIEWS.map(([value, label, icon]) => ({ value, label: value === 'thinking' && p.counts.why_open ? `${label} · ${p.counts.why_open > 9 ? '9+' : p.counts.why_open}` : label, title: value === 'thinking' && p.counts.why_open ? `${p.counts.why_open} changes waiting for your why` : undefined, ...(narrow ? { icon } : {}) }))}  />
     <Menu label="More of this project" btn="ibtn" text={more ? (<span className="small">{more[1]}</span>) : null} items={[
       ...MORE.map(([tid, label, icon]) => ({ label: `${label}${tid === 'artifacts' && p.counts.artifacts ? ` · ${p.counts.artifacts}` : tid === 'issues' && p.counts.issues ? ` · ${p.counts.issues}` : ''}`, icon, onClick: () => go(`/p/${id}/${tid}`) })),
       p.can_edit && '-',
@@ -322,6 +323,7 @@ export function Project({ id, tab, sub }) {
       {view === 'timeline' && (<Timeline p={p} exploration={sub} key={sub}  />)}
       {view === 'canvas' && (<ProjectCanvas p={p}  />)}
       {view === 'casestudy' && (<CaseStudy p={p} focus={sub}  />)}
+      {view === 'thinking' && (<Thinking p={p} sub={sub}  />)}
       {view === 'artifacts' && (<Artifacts p={p} sub={sub}  />)}
       {view === 'decks' && (<Decks p={p}  />)}
       {view === 'tree' && (<Tree p={p}  />)}

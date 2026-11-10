@@ -78,6 +78,12 @@ db.exec(`CREATE TABLE IF NOT EXISTS history_run (id TEXT PRIMARY KEY, project_id
 CREATE INDEX IF NOT EXISTS history_run_p ON history_run (project_id, sha);
 CREATE TABLE IF NOT EXISTS history_shot (project_id TEXT, sha TEXT, image_key TEXT, thumb_key TEXT, created_at INTEGER, PRIMARY KEY (project_id, sha));`);
 
+// Thinking: the person's own reasons, in their words (server/thinking.js). A "why" answers a change; a thought is
+// dropped as it comes. beat = the part of the project's story it belongs to; beat_by = who picked it (rules, you, an agent).
+db.exec(`CREATE TABLE IF NOT EXISTS thought (id TEXT PRIMARY KEY, project_id TEXT, kind TEXT DEFAULT 'thought', text TEXT, beat TEXT, beat_by TEXT, moment_id TEXT, question TEXT, by TEXT, author TEXT, created_at INTEGER, updated_at INTEGER);
+CREATE INDEX IF NOT EXISTS thought_p ON thought (project_id, created_at);
+CREATE INDEX IF NOT EXISTS thought_m ON thought (moment_id);`);
+
 // Columns stored as JSON text, parsed on the way out.
 const JSON_COLS = new Set(['governs', 'steps', 'canvas', 'digest', 'anchor', 'evidence', 'meta', 'sentence', 'folders', 'settings', 'pinned', 'do_not_capture', 'workflow', 'scope', 'mapping_rules', 'cursor', 'health', 'payload', 'properties', 'embedding', 'img_vec', 'diff', 'flags', 'tags', 'basis', 'region', 'reactions', 'palette', 'moment_ids', 'reviewers', 'reviews', 'labels', 'links', 'context_pack', 'detail', 'project_ids', 'slides', 'centroid', 'range']);
 

@@ -498,5 +498,37 @@ assert.deepEqual(ST.emptied([{ a: 1 }]), []);
   assert.equal(D.rewrite('<p className="text-xl">Hi</p>', { prop: 'font-size', cls: 'text-lg', tw: { add: 'text-2xl', replace: ['text-lg'] } }), null);
 }
 
+// Thinking: the person's reasons in their words, sorted into the story by rule. The villain (the problem) gets 30–40%
+// of the telling; a change answered once stops being asked; an agent's filing keeps the person's words.
+{
+  const TH = await import('../server/thinking.js');
+  const { insert, now } = await import('../server/db.js');
+  const share = (act) => TH.BEATS.filter((b) => b.act === act).reduce((s, b) => s + b.share, 0);
+  assert.equal(TH.BEATS.reduce((s, b) => s + b.share, 0), 100);
+  assert.ok(share('villain') >= 30 && share('villain') <= 40, `the villain gets ${share('villain')}%`);
+  assert.equal(TH.clean('thought: the inbox felt like homework'), 'the inbox felt like homework');
+  assert.equal(TH.clean('Thought - rules over AI'), 'rules over AI');
+  assert.equal(TH.guessBeat('I got the first version wrong and had to fix it'), 'scenes');
+  assert.equal(TH.guessBeat('this should move retention'), 'business');
+  assert.equal(TH.guessBeat('the sky is blue'), null); // no cue: left for the person to sort
+  insert('project', { id: 'p_th', workspace_id: 'ws', name: 'Thinking test', created_at: now(), updated_at: now() });
+  insert('moment', { id: 'mo_th', project_id: 'p_th', title: 'Rules write the changelog', summary: 'x', status: 'accepted', start_ts: now(), end_ts: now(), created_at: now(), updated_at: now() });
+  assert.equal(TH.openWhys('p_th').length, 1);
+  assert.equal(TH.nudge('p_th').open, 1);
+  const w = TH.add('p_th', { text: 'Because one wrong line makes every line suspect', moment_id: 'mo_th' });
+  assert.equal(w.kind, 'why'); // tied to a change, so it's a why
+  assert.equal(TH.openWhys('p_th').length, 0); // answered once: not asked again
+  const t = TH.add('p_th', { text: 'thought: every new session started cold', beat: 'origin', by: 'agent', author: 'claude-code' });
+  assert.equal(t.text, 'every new session started cold'); // their words, minus the prefix
+  assert.equal(t.beat_by, 'agent');
+  const s = TH.story({ id: 'p_th', name: 'Thinking test' }, 10);
+  assert.equal(s.beats.find((b) => b.id === 'origin').items.length, 1);
+  assert.ok(s.beats.find((b) => b.id === 'world').open, 'an empty part asks its question');
+  assert.ok(s.tip, 'the villain isn’t built yet, so the story says to build it first');
+  assert.equal(s.beats.reduce((m, b) => m + b.minutes, 0) >= 9, true);
+  assert.ok(TH.markdown({ id: 'p_th', name: 'Thinking test' }, 10).includes('## The villain · 35%'));
+  assert.throws(() => TH.add('p_th', { text: '   ' }), /Write the thought first/);
+}
+
 console.log('selfcheck: all good');
 process.exit(0);

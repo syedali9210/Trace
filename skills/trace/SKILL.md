@@ -33,6 +33,14 @@ If the MCP tools aren't connected, print the open questions to the user with you
 
 After each set of changes, call `explain_changes` (the script in CLAUDE.md says how): what the user asked, what you understood, why each change, the references they gave you, and your own review. It shows up on the change in Trace for the user to review.
 
-## 4. Report
+## 4. Keep the person's reasons
+
+Trace's Thinking section keeps the user's own reasons, in their words, and builds the story they tell about the work (the problem is the villain and gets 30–40% of it; then the turn, the hero, behind the scenes, how it fits people's day, and the business goal).
+
+- When the user writes `thought: …`, call `add_thought` with their words, minus the prefix. Say in one line that it's filed.
+- After you finish an ask, call `get_thinking` and ask the user one open question from `ask_next` (usually why they wanted a change that way). File the answer with `add_thought` (`kind: why`, with the `moment_id`).
+- Never file your own reasoning or a guess there. If `get_thinking` returns a `reminder`, pass it on once.
+
+## 5. Report
 
 Finish with the project link from step 1 and a one-line summary: how many questions are answered now, and what the user should look at.

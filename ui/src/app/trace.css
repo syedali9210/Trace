@@ -827,6 +827,33 @@
   .cs-ev .src { font: 500 11px var(--mono); color: var(--ink-3); }
   .cs-ev-t { display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; font-size: 12.5px; color: var(--ink-3); cursor: pointer; text-align: left; }
   @media (hover: hover) and (pointer: fine) { .cs-ev-t:hover { color: var(--ink); } }
+  /* Thinking: your reasons in your words, and the story they make (views/thinking.jsx) */
+  .th-cap { display: flex; flex-direction: column; gap: 10px; padding: 16px; margin-bottom: 8px; }
+  .th-sec { display: flex; flex-direction: column; gap: 12px; padding: 28px 0; border-top: 1px solid var(--line); }
+  .th-sec h2 { font-size: 19px; letter-spacing: -0.02em; }
+  .th-why { display: flex; flex-direction: column; gap: 8px; padding: 16px; }
+  .th-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  .th-row { display: flex; gap: 12px; align-items: flex-start; padding: 14px 0; border-top: 1px solid var(--line); }
+  .th-row:first-child { border-top: 0; padding-top: 0; }
+  .th-text { font-size: 15px; line-height: 1.6; white-space: pre-wrap; }
+  .th-acts { gap: 6px; align-items: center; flex: none; }
+  .th-arc { display: flex; gap: 3px; height: 10px; border-radius: 99px; overflow: hidden; }
+  .th-arc i { display: block; min-width: 4px; }
+  .th-legend { gap: 14px; }
+  .th-legend .d { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+  .th-arc .a-villain, .th-legend .a-villain { background: var(--danger); }
+  .th-arc .a-turn, .th-legend .a-turn { background: var(--warn); }
+  .th-arc .a-hero, .th-legend .a-hero { background: var(--ok); }
+  .th-arc .a-ending, .th-legend .a-ending { background: var(--ink-3); }
+  .th-tip { padding: 10px 14px; border-radius: var(--r-lg); background: color-mix(in srgb, var(--danger) 8%, transparent); color: var(--ink-2); }
+  .th-act { display: flex; flex-direction: column; gap: 10px; }
+  .th-act > header { display: flex; flex-direction: column; gap: 2px; padding-top: 8px; }
+  .th-beat { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border-radius: var(--r-lg); background: var(--wash); border-left: 3px solid var(--act-c, var(--line-3)); }
+  .th-beat.a-villain { --act-c: var(--danger); } .th-beat.a-turn { --act-c: var(--warn); } .th-beat.a-hero { --act-c: var(--ok); } .th-beat.a-ending { --act-c: var(--ink-3); }
+  .th-beat ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.6; }
+  .th-more { align-self: flex-start; padding: 0; border: 0; background: none; font-size: 12.5px; color: var(--ink-3); cursor: pointer; text-align: left; }
+  @media (hover: hover) and (pointer: fine) { .th-more:hover { color: var(--ink); } }
+  @media (max-width: 720px) { .th-row { flex-wrap: wrap; } .th-acts { width: 100%; } }
 
   /* ========== artifacts: the story on the left, the thing running on the right ========== */
   .arts { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 16px; height: calc(100svh - 290px); min-height: 540px; padding-top: 12px; }
