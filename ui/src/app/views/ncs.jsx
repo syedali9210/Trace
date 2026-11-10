@@ -26,14 +26,14 @@ const swatched = (s) => String(s).split(', ').map((x, i) => <Fragment key={x?.id
 
 export const Sentence = ({ seg, text }) => (<p className="sentence">{(seg?.length ? seg : [{ t: text || '' }]).map((s, i) => (s.k ? (<span key={i} className="kw">{s.k}</span>) : s.t))}</p>);
 
-function Rows({ rows, ts }) {
-  return (<dl className="clog-rows">{rows.map((c) => {
+export function Rows({ rows, ts }) {
+  return (<dl className="clog-rows">{rows.map((c, i) => {
     const added = c.after === 'added', removed = c.after === 'removed';
     const node = c.path.split(' › ')[0].replace(/\s*\([A-Z]+\)$/, '');
-    return <><dt>{c.category}</dt><dd>
+    return <Fragment key={c.id ?? i}><dt>{c.category}</dt><dd>
       <span className="v"><span className="dot" aria-hidden="true"></span><span className="trunc">{added ? <>Added {node}</> : removed ? <>Removed {node}</> : <>{c.before ? <>{swatched(val(c.before, c.attr))} <span className="arrow">→</span></> : ''}{swatched(val(c.after, c.attr))}</>}</span></span>
       <span className="sub trunc">{added || removed ? 'Layer' : `${c.attr}${node && node !== c.attr ? ` · ${node}` : ''}`} · {time(ts)}</span>
-    </dd></>;
+    </dd></Fragment>;
   })}</dl>);
 }
 

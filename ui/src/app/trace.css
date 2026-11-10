@@ -320,7 +320,7 @@
   .fimg .cap { position: absolute; left: 12px; bottom: 12px; font-size: 12px; color: var(--ink); background: color-mix(in srgb, var(--panel) 92%, transparent); box-shadow: var(--hairline); padding: 3px 9px; border-radius: 7px; opacity: 0; transition: opacity var(--t) ease; }
   @media (hover: hover) and (pointer: fine) { .fimg:hover .cap { opacity: 1; } }
   .fimg:focus-visible .cap { opacity: 1; }
-  .frow > .fimg { height: auto; min-height: 300px; aspect-ratio: 16 / 7; }
+  .frow > .fimg { width: 100%; height: auto; min-height: 0; aspect-ratio: 16 / 7; align-self: stretch; } /* as wide as its column and as tall as the row. The 300px floor is the card's: on the picture, its ratio turned the floor into a width wider than the column, and the page scrolled sideways at 1,024 */
   .frow > .fimg img { padding: 32px; }
   /* Home's feed: the project's main page on its effect, as on its card. The tile is wide, so the frame takes the tile's
      height and rises from its bottom edge; latest work that isn't an app stands whole in the middle. */
@@ -350,6 +350,51 @@
   @media (hover: hover) and (pointer: fine) { .task:hover { background: var(--hover); } }
   .expanded { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(260px, 1fr); gap: 16px; align-items: start; }
   .expanded .fimg.big { height: auto; aspect-ratio: 4 / 3; }
+  /* What the card says: its changelog, then where the project stands, then what’s next. Each is one block. */
+  .clog-sec { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .clog-sec > h3 { margin: 0; font-size: 12px; font-weight: 500; letter-spacing: 0; color: var(--ink-3); }
+  .clog-sec > .sentence { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .clog-stands { margin: 0; font-size: var(--fs-ui); line-height: 20px; color: var(--ink-2); display: -webkit-box; -webkit-line-clamp: 4; line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+  .clog-need { display: flex; align-items: center; gap: 6px; width: fit-content; margin: -2px 0; border-radius: 999px; text-decoration: none; }
+  .clog-need:focus-visible { outline: none; box-shadow: var(--focus); }
+  /* A big row’s card is as tall as its picture. Its blocks go down the card in order and a block that doesn’t fit
+     whole is left out (it wraps into a second column the card clips), so the buttons never sit on words and nothing
+     is cut through the middle. A taller card (a wide window) gives where-it-stands more lines. */
+  @media (min-width: 1024px) {
+    .frow .feedcard { container-type: size; }
+    .frow .feedcard > .clog { flex-wrap: wrap; align-content: flex-start; column-gap: 48px; padding-bottom: 52px; } /* the gap is wider than the card's padding: nothing of the second column shows */
+    .frow .feedcard > .clog > :not(.clog-foot, .clog-need) { width: 100%; }
+    @container (min-height: 520px) { .frow .clog-stands { -webkit-line-clamp: 8; line-clamp: 8; } }
+    @container (max-height: 339px) { .frow .clog-stands { -webkit-line-clamp: 2; line-clamp: 2; } } /* a short card (a narrow window): two lines of it fit where four wouldn’t */
+  }
+  /* Earlier projects: the same pair (its main page on its effect, its card beside it), two to a row. The picture sets
+     the height; the card keeps to what fits it: name, facts, what needs you, where it stands, where to go. */
+  .feed-h { display: flex; align-items: baseline; gap: 8px; margin: 16px 0 -4px; font-size: var(--fs-ui); font-weight: 500; letter-spacing: 0; color: var(--ink); }
+  .feed-h span { font-size: var(--fs-meta); font-weight: 400; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .bricks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .brick { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; min-width: 0; }
+  .brick > .brick-pic { aspect-ratio: 3 / 2; border-radius: var(--r-lg); text-decoration: none; }
+  .brick-pic .pc-frame:not(.phone, .tablet) { top: 24%; } /* a 3:2 tile is taller than a card’s: the window still rises from its bottom edge */
+  .brick-pic:focus-visible { outline: none; box-shadow: var(--focus); }
+  .brick .feedcard { position: relative; min-height: 0; }
+  .brick .feedcard > .clog { position: absolute; inset: 0; overflow: hidden; }
+  .brick .feedcard > .clog::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 52px; background: linear-gradient(to bottom, transparent, var(--panel) 62%); border-radius: 0 0 var(--r-lg) var(--r-lg); pointer-events: none; }
+  .clog.sm { padding: 16px; gap: 8px; }
+  .clog.sm > .sentence { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
+  .clog.sm .clog-stands, .clog.sm > .sentence { -webkit-line-clamp: 4; line-clamp: 4; }
+  .clog.sm:has(.clog-need) .clog-stands, .clog.sm:has(.clog-need) > .sentence { -webkit-line-clamp: 3; line-clamp: 3; }
+  .clog.sm .clog-foot { left: 10px; right: 10px; bottom: 10px; }
+  @media (min-width: 721px) { /* the lines a card of this height holds above its buttons */
+    .brick .feedcard { container-type: size; }
+    @container (max-height: 207px) { .clog.sm .clog-stands, .clog.sm > .sentence { -webkit-line-clamp: 3; line-clamp: 3; } .clog.sm:has(.clog-need) .clog-stands, .clog.sm:has(.clog-need) > .sentence { -webkit-line-clamp: 2; line-clamp: 2; } }
+    @container (max-height: 190px) { .clog.sm:has(.clog-need) .clog-stands, .clog.sm:has(.clog-need) > .sentence { -webkit-line-clamp: 1; line-clamp: 1; } }
+    @container (max-height: 179px) { .clog.sm .clog-stands, .clog.sm > .sentence { -webkit-line-clamp: 2; line-clamp: 2; } }
+  }
+  @media (hover: hover) and (pointer: fine) { .brick-pic:hover .pc-frame { transform: translateX(-50%) translateY(-5px); } }
+  @media (max-width: 1279px) { /* one to a row: a small picture, the card as wide as the page */
+    .bricks { grid-template-columns: minmax(0, 1fr); }
+    .brick { grid-template-columns: minmax(200px, 300px) minmax(0, 1fr); }
+  }
 
   /* ========== Projects ========== */
   /* Projects: each project as a card, lifting when it's pointed at */
@@ -393,6 +438,16 @@
   }
   .pc:active { transform: scale(.985); transition-duration: 90ms; }
   @media (max-width: 720px) { .pc-grid, .pc-grid.wide { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; } .pc-b { padding: 12px; } .hd-sub { display: none; } }
+  @media (max-width: 720px) { /* a phone: each earlier project stacks like the newest ones */
+    .bricks { gap: 24px; }
+    .brick { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+    .brick > .brick-pic { aspect-ratio: 16 / 10; }
+    .brick-pic .pc-frame:not(.phone, .tablet) { top: 18%; }
+    .brick .feedcard > .clog { position: relative; }
+    .brick .feedcard > .clog::after { display: none; }
+    .clog.sm .clog-foot { position: static; margin: 4px -6px -6px; }
+    .feed-h { margin-top: 20px; }
+  }
   .searchbar { display: flex; align-items: center; gap: 8px; height: 36px; width: min(440px, 100%); padding: 0 12px; border-radius: var(--r); border: 1px solid var(--input); background: transparent; box-shadow: var(--sh-1); color: var(--muted-foreground); transition: border-color var(--t-fast) ease, box-shadow var(--t-fast) ease; }
   .searchbar:focus-within { border-color: var(--focus-ring); box-shadow: var(--focus); }
   .searchbar input { border: 0; outline: none; background: none; width: 100%; font-size: 13px; color: var(--ink); }
@@ -1313,6 +1368,9 @@
     .frow .feedcard { min-height: 0; }
     .frow .feedcard > .clog { position: relative; max-height: none; }
     .frow .feedcard > .clog::after { display: none; } /* stacked, the card is as tall as its content */
+    .frow .clog-foot { position: static; margin: 4px -8px -8px; }
+    .feed { gap: 24px; } .frow, .frow.flip { gap: 12px; } /* a picture sits nearer its own card than the next project */
+    .frow > .fstage .pc-frame:not(.phone, .tablet, .work) { top: 32%; width: 86%; height: auto; max-width: none; } /* a 4:3 tile: the window by its width, whole from side to side (by the tile's height it was cut at both sides) */
     .rv { grid-template-columns: minmax(0, 1fr); }
     .deck { grid-template-columns: minmax(0, 1fr); }
     .deck .strip { flex-direction: row; flex-wrap: wrap; max-height: none; }

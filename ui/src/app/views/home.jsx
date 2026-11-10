@@ -1,8 +1,8 @@
-// Home: NCS's Latest feed (each project's newest work big beside its changelog card, sides alternating; the tasks
-// wait in the expanded view), plus To do (every project's tasks on a board). The project card Projects and Ask use
-// lives here too.
+// Home: NCS's Latest feed. The two newest projects stand big beside their cards, sides alternating; the ones before
+// them stand two to a row, so every project is within two screens (the tasks wait in the expanded view). Plus To do
+// (every project's tasks on a board). The project card Projects and Ask use lives here too.
 import { useState, api, useFetch, useMe, refreshMe, Header, Icon, ErrorBox, Seg, Avatar, Dialog, fileUrl, toast, fail, go, plural, rel, initials, Button, ph, Tip, sx, cn } from '../lib.jsx';
-import { Changelog, Sentence, AttrCards, dayLabel, time } from './ncs.jsx';
+import { Rows, Sentence, AttrCards, dayLabel, time } from './ncs.jsx';
 import { Todo } from './todo.jsx';
 import { Backdrop, effectFor } from '../effects/index.jsx';
 
@@ -34,41 +34,73 @@ function Expanded({ p, onClose }) {
   </Dialog>);
 }
 
-// One project: its newest work big, its changelog card beside it, sides swapping row by row (NCS's home).
-// The project's main page standing on its effect, as on its card. `n`: which of its kind it is (the same background).
-function Row({ p, i, n, reload, onExpand }) {
-  const m = p.latest;
+// A project's card on Home: NCS's changelog (what changed last, in a sentence, with its values when it has them),
+// then where the project stands and what's next, which an import of files alone can't say. `small`: the card of an
+// earlier project beside its smaller picture: where it stands, or its last change when nothing is written yet.
+function FeedCard({ p, small, reload, onExpand }) {
+  const m = p.latest, open = p.open_reviews || 0, tasks = p.tasks?.length || 0;
   const again = () => api(`/moments/${m.id}/redescribe`, { method: 'POST' }).then(() => { toast('Writing it again from the diff'); setTimeout(reload, 800); }).catch(fail);
   const facts = [p.screens > 0 && plural(p.screens, 'screen'), p.files > 0 && plural(p.files, 'file'), p.iterations > 0 && plural(p.iterations, 'change'), rel(p.last)].filter(Boolean).join(' · ');
-  const clog = (<div className="feedcard"><Changelog m={m && { ...m, rows: m.rows.slice(0, 8) }} project={p} sub={<span className="clog-sub">{facts}</span>} menu={<>{m && (<Button variant="ghost" size="icon-compact" aria-label="Write the changes again" title="Write again" onClick={again}><Icon n="arrows-clockwise" size={15} /></Button>)}</>}>
-    {p.next && (<div className="clog-next"><span>Next</span><p>{p.next}</p></div>)}
+  const change = m && (<Sentence seg={m.sentence} text={m.summary} />);
+  const stands = p.stands && (<p className="clog-stands">{p.stands}</p>);
+  return (<div className="feedcard"><article className={cn('clog', small && 'sm')}>
+    <div className="clog-h"><Avatar name={p.name} /><b className="trunc">{p.name}</b>{m && !small && (<span className="tools"><Button variant="ghost" size="icon-compact" aria-label="Write the changes again" title="Write again" onClick={again}><Icon n="arrows-clockwise" size={15} /></Button></span>)}</div>
+    <span className="clog-sub">{facts}</span>
+    {open + tasks > 0 && (<a className="clog-need" href={`#/p/${p.id}/b/${open > 0 ? 'reviews' : 'tasks'}`}>{open > 0 && (<span className="pc-flag">{plural(open, 'review')}</span>)}{tasks > 0 && (<span className="pc-flag">{plural(tasks, 'task')}</span>)}<span className="pc-need-l">{open + tasks === 1 ? 'needs you' : 'need you'}</span></a>)}
+    {small ? (stands || change || (<p className="clog-stands">Nothing accepted yet.</p>))
+      : <>{m && (<section className="clog-sec"><h3>Changes</h3>{change}{m.rows?.length > 0 && (<Rows rows={m.rows.slice(0, 3)} ts={m.end_ts} />)}</section>)}
+        {stands && (<section className="clog-sec"><h3>Where it stands</h3>{stands}</section>)}
+        {!m && !stands && (<p className="clog-stands">Nothing accepted yet.</p>)}</>}
+    {p.next && !small && (<div className="clog-next"><span>Next</span><p>{p.next}</p></div>)}
     <div className="clog-foot">{/* where to go from here, named */}
       <Button variant="tertiary" size="compact" render={<a href={`#/p/${p.id}`} />}>Open</Button>
       {p.code && (<Button variant="ghost" size="compact" render={<a href={`#/p/${p.id}/history`} />}>Versions</Button>)}
       {p.code && (<Button variant="ghost" size="compact" render={<a href={`#/p/${p.id}/design`} />}>Design</Button>)}
       <span className="grow"></span>
-      <Button variant="ghost" size="icon-compact" aria-label={`Expand ${p.name}`} title="Expand" onClick={() => onExpand(p)}><Icon n="arrows-out-simple" size={15} /></Button>
+      {m && (<Button variant="ghost" size="icon-compact" aria-label={`Expand ${p.name}`} title="Expand" onClick={() => onExpand(p)}><Icon n="arrows-out-simple" size={15} /></Button>)}
     </div>
-  </Changelog></div>);
-  const pic = (<a className="fimg wide fstage" href={`#/p/${p.id}`} aria-label={`Open ${p.name}`}><Cover p={p} n={n} /><span className="cap">{p.name}</span></a>);
-  return (<div className={`frow${i % 2 ? ' flip' : ''}`}>{pic}{clog}</div>);
+  </article></div>);
 }
+
+// One of the newest projects: its main page big, standing on its effect, its card beside it, sides swapping row by
+// row (NCS's home). `n`: which of its kind it is (the same background as on its Projects card).
+function Row({ p, i, n, reload, onExpand }) {
+  return (<div className={`frow${i % 2 ? ' flip' : ''}`}>
+    <a className="fimg wide fstage" href={`#/p/${p.id}`} aria-label={`Open ${p.name}`}><Cover p={p} n={n} /><span className="cap">{p.name}</span></a>
+    <FeedCard p={p} reload={reload} onExpand={onExpand} />
+  </div>);
+}
+// An earlier project: the same pair, smaller, two to a row.
+function Brick({ p, n, reload, onExpand }) {
+  return (<div className="brick">
+    <a className="brick-pic pc-pic" href={`#/p/${p.id}`} aria-label={`Open ${p.name}`}><Cover p={p} n={n} /></a>
+    <FeedCard p={p} small reload={reload} onExpand={onExpand} />
+  </div>);
+}
+const LEAD = 2; // how many of the newest keep the big row, once there are more projects than fit as big rows
 export function Latest() {
   const { data, error, loading, reload } = useFetch('/feed', ['moment', 'project', 'issue']);
   const me = useMe();
   const [big, setBig] = useState(null);
   const [seeding, setSeeding] = useState(false);
   const seed = async () => { if (seeding) return; setSeeding(true); try { await api('/demo', { method: 'POST' }); await refreshMe(); toast('Loading the sample. Watch it fill in.'); reload(); } catch (e) { fail(e); } setSeeding(false); };
-  const rows = data?.projects.filter((p) => p.latest) || [];
+  const feed = data?.projects.filter((p) => p.latest || p.files > 0) || []; // every project with something in it, newest first
+  const lead = feed.length > LEAD + 1 ? feed.slice(0, LEAD) : feed, rest = feed.slice(lead.length);
   const need = data?.projects.filter((p) => (p.open_reviews || 0) + (p.tasks?.length || 0) > 0) || []; // what needs you, before what's new
-  return <><Header actions={(<TopActions review={me?.inbox} view="latest"  />)}><b>Home</b></Header>
+  return <><Header actions={(<TopActions review={me?.inbox} view="latest"  />)}><b>Home</b>{feed.length > 0 && (<span className="hd-sub">{plural(feed.length, 'project')} · last change {rel(feed[0].last)}</span>)}</Header>
     <div className="content">
       {error && (<ErrorBox error={error} retry={reload}  />)}
       {loading && !data && (<div className="feed">{[1, 2].map((_, ki) => (<div key={ki} className="frow"><div className="skeleton" style={sx("height:380px")}></div><div className="skeleton" style={sx("height:380px")}></div></div>))}</div>)}
-      {data && !rows.length && (<div className="empty"><Icon n="files" cls="big"  /><h2>Drop files here</h2><p>Or use the upload button below. Trace sorts each file into the right project and notes what changed.</p>
+      {data && !feed.length && (<div className="empty"><Icon n="files" cls="big"  /><h2>Drop files here</h2><p>Or use the upload button below. Trace sorts each file into the right project and notes what changed.</p>
         <div className="row wrap" style={sx("margin-top:12px;justify-content:center")}><Button variant="tertiary" size="compact" render={<a href="#/settings/sources" />}>Connect a tool</Button><Button variant="ghost" size="compact" render={<a href="#/memory" />}>Connect your AIs’ memory</Button>{!me?.projects?.length && (<Button variant="ghost" size="compact" onClick={seed} aria-disabled={seeding}>{seeding ? 'Loading…' : 'Load a sample'}</Button>)}</div></div>)}
       {need.length > 0 && (<nav className="needs-line" aria-label="Needs you"><span>Needs you</span>{need.map((p) => (<a key={p.id} className="needs-item" href={`#/p/${p.id}`}><b>{p.name}</b>{p.open_reviews > 0 && (<span className="pc-flag">{plural(p.open_reviews, 'review')}</span>)}{p.tasks?.length > 0 && (<span className="pc-flag">{plural(p.tasks.length, 'task')}</span>)}<Icon n="arrow-right" /></a>))}</nav>)}
-      {rows.length > 0 && (<div className="feed">{rows.map((p, i) => (<Row p={p} i={i} n={kindIndex(data.projects, p)} reload={reload} key={p.id} onExpand={setBig}  />))}</div>)}
+      {feed.length > 0 && (<div className="feed">
+        {lead.map((p, i) => (<Row p={p} i={i} n={kindIndex(data.projects, p)} reload={reload} key={p.id} onExpand={setBig}  />))}
+        {rest.length > 0 && <>
+          <h2 className="feed-h">Earlier<span>{plural(rest.length, 'project')}</span></h2>
+          <div className="bricks">{rest.map((p) => (<Brick p={p} n={kindIndex(data.projects, p)} reload={reload} key={p.id} onExpand={setBig} />))}</div>
+        </>}
+      </div>)}
     </div>
     {big && (<Expanded p={big} onClose={() => setBig(null)}  />)}</>;
 }
